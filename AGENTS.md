@@ -4,8 +4,8 @@
 
 - Treat `src/core/presets.ts` as the canonical assembly for preset-to-role-source selection, model/effort mappings, MCP blacklists, aliases, and generated agent TOML. Keep versioned role prompts and role order under `src/core/role-sources/`.
 - Do not hand-edit files under `presets/<id>/agents/`. Change the generator, run tests, build, and regenerate snapshots.
-- Preserve the historical eight-role source for `openai-5.5` and `openai-5.6`. Current `.1` revisions contain exactly seven roles: `orchestrator`, `oracle`, `librarian`, `explorer`, `designer`, `fixer`, and `council`. Do not reintroduce `observer` into the current source or invent a `councillor` role.
-- Keep Council and Orchestrator as peer child coordinators. Council dynamically selects installed expert agents for feasibility, risks, and independent perspectives; Orchestrator implements an agreed approach through the five fixed Slim specialists. Neither coordinator spawns the other.
+- Each role source defines seven roles: `orchestrator`, `oracle`, `librarian`, `explorer`, `designer`, `fixer`, and `council`. A preset may omit `designer` (e.g., `zh-nodesigner`). Do not reintroduce `observer` or invent a `councillor` role.
+- Keep Council and Orchestrator as peer child coordinators. Council dynamically selects installed expert agents for feasibility, risks, and independent perspectives; Orchestrator implements an agreed approach through the Slim specialists (four or five, depending on whether the preset includes `designer`). Neither coordinator spawns the other.
 - Keep Root as the approval gate between Council advice and Orchestrator execution. Council prefers grilling, document-grounded challenge, deep research, brainstorming, and document co-authoring skills when available; do not hard-code installation-specific skill paths in generated TOML.
 
 ## Preset lifecycle

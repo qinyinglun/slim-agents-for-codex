@@ -1,6 +1,6 @@
 # Slim Codex architecture
 
-The current Codex translation uses seven runtime roles while preserving the historical eight-role presets.
+The current Codex translation uses seven runtime roles.
 
 ## Runtime graph
 
@@ -32,20 +32,21 @@ Every coordinator-to-specialist spawn uses `fork_turns="none"` with a self-conta
 
 ## Role sources and presets
 
-`src/core/presets.ts` is the canonical assembly for role-source selection, model and effort mappings, aliases, and MCP restrictions. Prompt and role-order history lives under `src/core/role-sources/`.
+`src/core/presets.ts` is the canonical assembly for role-source selection, model and effort mappings, aliases, MCP restrictions, and Skill names. Prompt and role-order history lives under `src/core/role-sources/`.
 
 Codex parses every standalone agent TOML as a complete config layer before it merges that layer into a spawned session. A bare `[mcp_servers.<id>] enabled = false` table fails standalone parsing because it has no transport; a dummy transport can then conflict with the inherited server transport during merging. Portable generated roles therefore keep the reviewed MCP denylist as behavioral `developer_instructions` and emit no role-local MCP tables. Hard per-role MCP enforcement requires installation-specific complete transports or a future Codex-native denylist mechanism.
 
-- `reviewed-2026-07` backs immutable eight-role `openai-5.5` and `openai-5.6` snapshots.
-- `slim-codex-2026-07` backs seven-role `openai-5.5.1` and `openai-5.6.1` snapshots.
-- The `.1` presets retain every GPT model and effort mapping for their seven retained roles.
-- Observer is not present in the current source. Visual inspection belongs to Oracle, Explorer, or Designer according to the task.
+- `slim-codex-2026-07` backs seven-role `openai-5.6.1` snapshots (English).
+- `slim-codex-2026-07-zh` backs seven-role `openai-5.6` snapshots (Simplified Chinese).
+- Visual inspection belongs to Oracle, Explorer, or Designer according to the task.
 
 Generated and installed agent TOMLs remain flat under `agents/`. Additional Council-selectable custom experts are installed independently under project `.codex/agents/` or global `CODEX_HOME/agents/` and registered in the matching `config.toml`.
 
 ## Skill boundary
 
-- `.agents/skills/slim-orchestration/SKILL.md` defines how Orchestrator plans persistent deep work and schedules only the five built-in Slim specialists through implementation and verification.
-- `.agents/skills/slim-council/SKILL.md` defines how Council selects installed expert agents by description, obtains independent advisory perspectives, handles partial failures, and returns a feasibility-and-risk recommendation for Root approval.
+Each preset ships its own Skill files under `presets/<id>/skills/`:
 
-Root owns the routing decision and any Council-to-Orchestrator handoff. Each generated coordinator prompt remains self-contained and treats its corresponding skill as optional, so explicitly spawned coordinators still have a safe contract when the skill is unavailable.
+- `slim-orchestration/SKILL.md` defines how Orchestrator plans persistent deep work and schedules only the five built-in Slim specialists through implementation and verification.
+- `slim-council/SKILL.md` defines how Council selects installed expert agents by description, obtains independent advisory perspectives, handles partial failures, and returns a feasibility-and-risk recommendation for Root approval.
+
+Root owns the routing decision and any Council-to-Orchestrator handoff. Each generated coordinator prompt remains self-contained and treats its corresponding skill as optional, so explicitly spawned coordinators still have a safe contract when the skill is unavailable. Installing or switching a preset automatically deploys the matching Skill files to the configured `skillsHome`.

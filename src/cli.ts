@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { parse } from "smol-toml";
-import { installPreset, managedSkillNames, previewInstall, validateInstalledSkills } from "./core/installer.js";
+import { filesBelow, installPreset, previewInstall, skillsSourceDir, validateInstalledSkills } from "./core/installer.js";
 import { aliases, generatePreset, managedRoleNames, presets, renderAliases } from "./core/presets.js";
 
 export interface CliIo { log(line: string): void; confirm(question: string): Promise<boolean> }
@@ -29,20 +29,23 @@ async function writeGenerated(id: string, output: string) {
   for (const [name, content] of Object.entries(generated.agents)) await writeFile(join(agentsDirectory, `${name}.toml`), content, "utf8");
   await writeFile(join(root, "config.snippet.toml"), generated.snippet, "utf8");
   await writeFile(join(root, "manifest.json"), generated.manifest, "utf8");
+  for (const name of generated.skillNames) {
+    const src = skillsSourceDir(generated.preset.id, name);
+    const dst = join(root, "skills", name);
+    if (src !== dst) await cp(src, dst, { recursive: true });
+  }
   return root;
 }
 
 function generatedArtifacts(id: string, output: string) {
   const generated = generatePreset(id);
   const root = join(output, generated.preset.id);
-  return {
-    root,
-    artifacts: [
-      ...generated.roleOrder.map((name) => ({ path: join(root, "agents", `${name}.toml`), content: generated.agents[name] })),
-      { path: join(root, "config.snippet.toml"), content: generated.snippet },
-      { path: join(root, "manifest.json"), content: generated.manifest },
-    ],
-  };
+  const artifacts = [
+    ...generated.roleOrder.map((name) => ({ path: join(root, "agents", `${name}.toml`), content: generated.agents[name] })),
+    { path: join(root, "config.snippet.toml"), content: generated.snippet },
+    { path: join(root, "manifest.json"), content: generated.manifest },
+  ];
+  return { root, artifacts };
 }
 
 function stable(value: unknown): unknown {
@@ -56,8 +59,9 @@ function matchesSemantically(actual: unknown, expected: unknown) {
 }
 
 async function assertGeneratedArtifactsMatch(id: string, output: string) {
-  const generated = generatedArtifacts(id, output);
-  const agentsDirectory = join(generated.root, "agents");
+  const generated = generatePreset(id);
+  const root = join(output, generated.preset.id);
+  const agentsDirectory = join(root, "agents");
   let actualAgentFiles: string[];
   try {
     actualAgentFiles = (await readdir(agentsDirectory)).filter((name) => name.endsWith(".toml")).sort();
@@ -65,21 +69,34 @@ async function assertGeneratedArtifactsMatch(id: string, output: string) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new Error(`Missing generated artifact: ${agentsDirectory}`);
     throw error;
   }
-  const expectedAgentFiles = generated.artifacts
-    .map(({ path }) => path)
-    .filter((path) => dirname(path) === agentsDirectory)
-    .map((path) => basename(path))
-    .sort();
+  const expectedAgentFiles = generated.roleOrder.map((name) => `${name}.toml`).sort();
   if (JSON.stringify(actualAgentFiles) !== JSON.stringify(expectedAgentFiles)) throw new Error(`Agent files do not match preset snapshot: ${id}`);
-  for (const artifact of generated.artifacts) {
+  for (const name of generated.roleOrder) {
+    const path = join(agentsDirectory, `${name}.toml`);
     let committed: string;
     try {
-      committed = await readFile(artifact.path, "utf8");
+      committed = await readFile(path, "utf8");
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new Error(`Missing generated artifact: ${artifact.path}`);
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new Error(`Missing generated artifact: ${path}`);
       throw error;
     }
-    if (committed !== artifact.content) throw new Error(`Generated artifact drift: ${artifact.path}`);
+    if (committed !== generated.agents[name]) throw new Error(`Generated artifact drift: ${path}`);
+  }
+  const snippetPath = join(root, "config.snippet.toml");
+  const manifestPath = join(root, "manifest.json");
+  if ((await readFile(snippetPath, "utf8")) !== generated.snippet) throw new Error(`Generated artifact drift: ${snippetPath}`);
+  if ((await readFile(manifestPath, "utf8")) !== generated.manifest) throw new Error(`Generated artifact drift: ${manifestPath}`);
+  for (const skillName of generated.skillNames) {
+    const src = skillsSourceDir(generated.preset.id, skillName);
+    const dst = join(root, "skills", skillName);
+    const srcFiles = await filesBelow(src);
+    const dstFiles = await filesBelow(dst);
+    if (JSON.stringify(srcFiles) !== JSON.stringify(dstFiles)) throw new Error(`Skill file drift: ${skillName}`);
+    for (const file of srcFiles) {
+      const srcContent = await readFile(join(src, file));
+      const dstContent = await readFile(join(dst, file));
+      if (!srcContent.equals(dstContent)) throw new Error(`Skill content drift: ${skillName}/${file.replaceAll("\\", "/")}`);
+    }
   }
 }
 
@@ -146,8 +163,8 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
       }
       io.log(`valid installation: ${codexHome} (${generated.roleOrder.length} roles)`);
       const skillsHome = resolve(skillsHomeOption);
-      await validateInstalledSkills(skillsHome);
-      io.log(`valid skills: ${skillsHome} (${managedSkillNames.length} skills)`);
+      await validateInstalledSkills(generated.preset.id, skillsHome, generated.skillNames);
+      io.log(`valid skills: ${skillsHome} (${generated.skillNames.length} skills)`);
       return 0;
     }
     const directory = resolve(valueAfter(args, "--path", `presets/${generated.preset.id}/agents`)!);

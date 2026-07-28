@@ -1,50 +1,32 @@
 # Adding a Model Preset
 
-English | [繁體中文](adding-a-preset.zh-TW.md)
+English | [简体中文](adding-a-preset.zh-CN.md)
 
-This guide explains how to add a new Codex preset when [alvinunreal/oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) introduces a new OpenAI configuration. It uses `openai-5.7` as an example.
+This guide explains how to add a new Codex preset when a new upstream configuration is available. It uses `openai-5.7` as an example.
 
 ## Determine the type of change
 
-Compare the new upstream version with the previous one before editing this project:
-
 - If only model names and reasoning effort values changed, add a new preset directly.
-- If role prompts, the role list, or role behavior changed, do not edit the shared `roles` object directly. Version the role definitions by adapter or preset first.
+- If role prompts, the role list, or role behavior changed, version the role definitions first.
 - If the existing Codex translation is incorrect across presets, fix the shared generator, regenerate every affected snapshot, and release the correction as a new package version without moving old tags.
 
-Published model mappings and manifests such as `openai-5.5` and `openai-5.6` must remain reproducible. Adding a new generation must not rewrite or delete them.
-
-## Current limitations
-
-The CLI does not download or parse upstream configurations automatically. A maintainer must inspect the upstream version, verify its model names, effort values, and role changes, and then add the reviewed mapping to this repository.
-
-The `convert` command generates the agent TOMLs selected by the preset's versioned role source, `config.snippet.toml`, and `manifest.json`. With `--all`, it also renders `presets/aliases.json` from the generator source of truth.
+Published model mappings and manifests must remain reproducible. Adding a new generation must not rewrite or delete them.
 
 ## 1. Prepare a working copy
 
 ```bash
-git clone https://github.com/WANGCHIENCHIH/slim-agents-for-codex.git
+git clone https://github.com/qinyinglun/slim-agents-for-codex.git
 cd slim-agents-for-codex
 npm ci
 ```
 
-Confirm that the working tree is clean and make the change on a new branch.
-
 ## 2. Review the upstream configuration
 
-Inspect the upstream configuration and role sources. Record:
-
-- The upstream commit, tag, or review date.
-- The model assigned to every role in the selected role source.
-- The reasoning effort assigned to each role.
-- Whether prompts, the role list, or behavior changed.
-- Whether Codex actually supports the mapped model names.
-
-Do not infer `sol`, `terra`, `luna`, or any other model name from the version number. Do not add automatic fallback behavior. Model availability still depends on the user's account and current Codex support.
+Record the upstream commit, model-to-role mapping, reasoning effort, any prompt or role-list changes, and whether Codex supports the mapped model names. Do not infer model names from version numbers.
 
 ## 3. Add the preset mapping
 
-Edit `src/core/presets.ts` and add a complete mapping for the selected versioned role source. The current seven-role source uses:
+Edit `src/core/presets.ts` and add a mapping:
 
 ```ts
 "openai-5.7": {
@@ -52,7 +34,7 @@ Edit `src/core/presets.ts` and add a complete mapping for the selected versioned
   adapter: "oh-my-opencode-slim",
   adapterSchemaVersion: 2,
   source: "alvinunreal/oh-my-opencode-slim",
-  sourceVersion: "reviewed-YYYY-MM",
+  sourceVersion: "slim-codex-2026-07",
   created: "YYYY-MM-DD",
   status: "supported",
   snapshotFormatVersion: 1,
@@ -65,25 +47,39 @@ Edit `src/core/presets.ts` and add a complete mapping for the selected versioned
     fixer: ["actual-model-name", "medium"],
     council: ["actual-model-name", "high"],
   }),
+  skillNames: managedSkillNames,
 },
 ```
 
-The effort values above illustrate the fields only. Use the reviewed upstream configuration as the source of truth.
-
-Update the aliases in the same file:
+If a preset should omit a role (e.g. no designer for server-side), use a role source that excludes that role and omit it from `models`:
 
 ```ts
-export const aliases = {
-  latest: "openai-5.7",
-  recommended: "openai-5.7",
-} as const;
+"openai-5.7-server": {
+  id: "openai-5.7-server",
+  adapter: "oh-my-opencode-slim",
+  adapterSchemaVersion: 2,
+  source: "alvinunreal/oh-my-opencode-slim",
+  sourceVersion: "slim-codex-2026-07-server",
+  created: "YYYY-MM-DD",
+  status: "supported",
+  snapshotFormatVersion: 1,
+  models: mapping({
+    orchestrator: ["actual-model-name", "medium"],
+    oracle: ["actual-model-name", "high"],
+    librarian: ["actual-model-name", "low"],
+    explorer: ["actual-model-name", "low"],
+    fixer: ["actual-model-name", "medium"],
+    council: ["actual-model-name", "high"],
+  }),
+  skillNames: managedSkillNames,
+},
 ```
 
-## 4. Review alias and manifest metadata
+If the preset needs different Skill content (e.g. removing designer references from the orchestration skill for a server-only preset), create a `skills/<name>/` directory under the preset output directory with an adapted `SKILL.md` and `agents/openai.yaml`. The `skillNames` field declares which Skill directories the preset ships.
 
-Keep alias targets and all manifest fields in `src/core/presets.ts`. Review the preset ID, adapter schema version, source, source version, creation date, status, and snapshot format before generation. Do not hand-edit generated `presets/aliases.json` or a preset manifest, and do not change metadata for an existing immutable preset.
+Update the aliases in the same file if this preset should become the default.
 
-## 5. Generate the TOML snapshot
+## 4. Generate the TOML snapshot
 
 ```bash
 npm run build
@@ -102,13 +98,18 @@ presets/openai-5.7/
 │   ├── designer.toml
 │   ├── fixer.toml
 │   └── council.toml
+├── skills/
+│   ├── slim-council/
+│   │   ├── SKILL.md
+│   │   └── agents/openai.yaml
+│   └── slim-orchestration/
+│       ├── SKILL.md
+│       └── agents/openai.yaml
 ├── config.snippet.toml
 └── manifest.json
 ```
 
-Inspect the `model`, `model_reasoning_effort`, `sandbox_mode`, and `developer_instructions` fields in every TOML.
-
-## 6. Verify the preset
+## 5. Verify the preset
 
 ```bash
 node dist/cli.js validate --path presets/openai-5.7/agents --preset openai-5.7
@@ -123,46 +124,17 @@ npm pack --dry-run
 Verify that:
 
 - The new preset contains exactly the roles declared by its versioned role source.
-- `openai-5.5`, `openai-5.6`, and every other historical preset remain present.
-- `latest` and `recommended` resolve to `openai-5.7`.
-- The package includes all new and historical presets.
-- Exact snapshot and semantic validation are not described as proof that an account can use the models.
+- All historical presets remain present and unchanged.
+- Skill files are properly bundled and validated.
+- Exact snapshot and semantic validation are not proof of model entitlement.
 
-## 7. Update the project version
+## 6. Update the project version
 
-Update both `package.json` and `package-lock.json` according to the scope of the change:
-
-- Adding a mapping without breaking an existing interface normally increments the minor version, for example from `0.1.1` to `0.2.0`.
-- A model/effort correction requires a new preset ID. A correction to the shared Codex translation may regenerate affected historical agent TOMLs, but requires a new package version and must not overwrite an existing tag or Release asset.
-
-Update the Release package filename in both the English and Traditional Chinese READMEs.
-
-## 8. Commit and release
-
-```bash
-git add .
-git commit -m "feat: add openai-5.7 preset"
-git push origin main
-git tag -a v0.2.0 -m "slim-agents-for-codex v0.2.0"
-git push origin v0.2.0
-```
-
-Pushing a `v*` tag makes GitHub Actions automatically:
-
-1. Install dependencies.
-2. Run tests, type checking, the build, and snapshot verification.
-3. Run `npm pack`.
-4. Generate a SHA-256 checksum.
-5. Create or update the GitHub Release.
-6. Upload the `.tgz` and `.sha256` files.
-
-After publication, verify the Release asset names and CI result. Install the `.tgz` into an isolated prefix and run `list-presets` and `validate` as a final smoke test.
+Update `package.json` and `package-lock.json` according to the scope of the change. Update the Release package filename in the READMEs.
 
 ## When prompts or roles change
 
-The current `roles` object in `src/core/presets.ts` is shared by every preset. Editing it directly for an intentional prompt or role-behavior change in a newer upstream release would make older presets adopt that new behavior.
-
-Version the role sources first, for example:
+Version the role sources before adding a new preset, for example:
 
 ```text
 src/adapters/oh-my-opencode-slim/
@@ -172,6 +144,4 @@ src/adapters/oh-my-opencode-slim/
     └── roles.ts
 ```
 
-Each preset manifest should reference a specific role-source version. Add the preset containing the new prompts only after versioning the role definitions and adding regression coverage for historical presets.
-
-This versioning requirement does not prevent correcting an error in the existing Codex translation. Apply such a correction to the shared generator only when the reviewed rule was already intended to apply across those presets, cover it with regression tests, regenerate every affected snapshot, and publish it in a new package release.
+Each preset manifest should reference a specific role-source version. Add regression coverage for historical presets.

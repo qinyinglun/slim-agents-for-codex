@@ -1,8 +1,10 @@
 # slim-agents-for-codex
 
-[繁體中文](README.zh-TW.md) | English
+[简体中文](README.zh-CN.md) | English
 
 Deterministic, reviewed Codex agent presets adapted from [alvinunreal/oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim). The original role concepts and behavior are the work of that project; this repository provides a Codex-specific adaptation. This community project is not affiliated with OpenAI or the upstream project.
+
+Special thanks to **alvinunreal/oh-my-opencode-slim** for the upstream Deepwork workflow, Council pattern, and the role-system design that this adaptation builds on.
 
 For official guidance on subagent workflows, custom agent TOML files, model and reasoning settings, and global `[agents]` controls, see [Subagents | ChatGPT Learn](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
@@ -17,10 +19,10 @@ Download `slim-agents-for-codex-0.2.0.tgz` from the matching GitHub Release, the
 ```bash
 npm install --global ./slim-agents-for-codex-0.2.0.tgz
 slim-agents-codex list-presets
-slim-agents-codex install --preset openai-5.6.1 --scope global
+slim-agents-codex install --preset openai-5.6-en --scope global
 ```
 
-If a `0.1.x` preset is already installed, use `slim-agents-codex switch-preset --preset openai-5.6.1 --scope global` instead. The switch archives the managed agents and Skills it replaces before post-validating the new installation.
+If a `0.1.x` preset is already installed, use `slim-agents-codex switch-preset --preset openai-5.6-en --scope global` instead. The switch archives the managed agents and Skills it replaces before post-validating the new installation.
 
 ### Run from a source checkout
 
@@ -28,15 +30,22 @@ If a `0.1.x` preset is already installed, use `slim-agents-codex switch-preset -
 npm ci
 npm run build
 node dist/cli.js list-presets
-node dist/cli.js convert --preset openai-5.6.1 --output generated
-node dist/cli.js install --preset openai-5.6.1
+node dist/cli.js install --preset openai-5.6-en
 ```
 
 `install` previews the resolved immutable preset, config path, Skill path, and backup path before asking for confirmation. It installs both the selected agent preset and the two managed Slim Skills. Use `--scope global` for `CODEX_HOME` (or `~/.codex`) plus `$HOME/.agents/skills`, and `--scope project` for the current project's `.codex` plus `.agents/skills`. Explicit `--codex-home PATH` and `--skills-home PATH` options override those targets. Use `--yes` only for explicit non-interactive installation.
 
+Available presets:
+
+- `openai-5.6-en` — English prompts and Skills (default, recommended), 7 roles with designer
+- `openai-5.6-zh` — Chinese (Simplified) prompts and Skills, 7 roles with designer
+- `openai-5.6-zh-nodesigner` — Chinese (Simplified) prompts and Skills, 6 roles without designer (server-side)
+
+Preset-specific Skill files are bundled under each preset directory and installed automatically.
+
 ## Manual installation
 
-Every npm package and source checkout includes ready-to-copy files under `presets/<id>/agents/`, `config.snippet.toml`, and `.agents/skills/`. Copy every TOML from the selected preset into `CODEX_HOME/agents/` for a global installation or `<project>/.codex/agents/` for a project installation, then merge the snippet into the matching `config.toml`. Copy `slim-council` and `slim-orchestration` into `$HOME/.agents/skills/` globally or `<project>/.agents/skills/` for one repository. Historical `openai-5.5` and `openai-5.6` presets contain eight roles; current `.1` revisions contain seven. In both scopes, `config_file = "agents/<role>.toml"` resolves relative to the config file that declares the role, as specified by the [Codex Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference). Preserve UTF-8 encoding, BOM state, and line endings, and make backups first.
+Every npm package and source checkout includes ready-to-copy files under `presets/<id>/agents/` and `presets/<id>/skills/`. Copy every TOML from the selected preset into `CODEX_HOME/agents/` for a global installation or `<project>/.codex/agents/` for a project installation, then merge the snippet into the matching `config.toml`. Copy the `skills/<name>/` directories into `$HOME/.agents/skills/` globally or `<project>/.agents/skills/` for one repository. In both scopes, `config_file = "agents/<role>.toml"` resolves relative to the config file that declares the role, as specified by the [Codex Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference). Preserve UTF-8 encoding, BOM state, and line endings, and make backups first.
 
 The CLI follows the same layout. Use `--scope global` for the global location or `--scope project` from a project root; use `--codex-home DIR` only when an explicit location is needed.
 
@@ -44,7 +53,7 @@ Do not place inactive legacy presets under `CODEX_HOME/agents/`: Codex recursive
 
 ## Preset lifecycle
 
-Preset IDs are immutable. `openai-5.5` and `openai-5.6` remain available as the historical eight-role translation. `openai-5.5.1` and `openai-5.6.1` retain the same GPT model and effort mappings for seven roles while removing Observer and adding Codex-native recursive coordination. `latest` and `recommended` are movable aliases defined in `presets/aliases.json`; the CLI always displays the resolved immutable ID before writing. There is no automatic model fallback.
+Preset IDs are immutable. `latest` and `recommended` are movable aliases defined in `presets/aliases.json`; the CLI always displays the resolved immutable ID before writing. There is no automatic model fallback. Each preset ships its own agent TOMLs, config snippet, manifest, and Skill files.
 
 ## Coordination model
 
@@ -59,9 +68,9 @@ See [Slim Codex architecture](docs/slim-codex-architecture.md) for the runtime g
 
 See [Council expert agents](docs/council-expert-agents.md) for the minimal read-only custom-agent TOML, model inheritance policy, and the parent-permission limitation.
 
-The source checkout exposes two workflows automatically: `.agents/skills/slim-orchestration/` for five-specialist execution and `.agents/skills/slim-council/` for task-specific expert deliberation. Release packages include both directories, and `install` or `switch-preset` deploys them to the selected Skill scope. Manual copying remains supported. Start a new Codex task after installation.
+Each preset bundles its own Skill files under `presets/<id>/skills/`. `install` or `switch-preset` deploys the active preset's Skills to the selected Skill scope. Start a new Codex task after installation.
 
-To add `openai-5.7` or a later generation, follow the [Adding a model preset maintenance guide](docs/adding-a-preset.md).
+To add a new generation, follow the [Adding a model preset maintenance guide](docs/adding-a-preset.md).
 
 ## Commands
 
@@ -74,7 +83,7 @@ To add `openai-5.7` or a later generation, follow the [Adding a model preset mai
 - `install --preset ID [--scope global|project] [--codex-home DIR] [--skills-home DIR] [--yes]`
 - `switch-preset --preset ID [--scope global|project] [--codex-home DIR] [--skills-home DIR] [--yes]`
 
-`convert --check` is non-mutating and fails when generated agent TOMLs, `config.snippet.toml`, manifests, or aliases differ from the committed snapshots. `validate --preset ID` compares parsed role semantics with the selected generator source; `validate --codex-home DIR` also resolves installed `agents/<role>.toml` paths from that directory's `config.toml` and requires `--skills-home DIR` so the exact packaged managed Skills cannot be skipped silently. Portable role files keep reviewed MCP denylists in `developer_instructions` and emit no partial `mcp_servers` tables, because standalone parsing and parent transport merging make partial or dummy transports invalid. `switch-preset` backs up the config before changing live agents or Skills, archives existing managed role files and managed Skills under `agent-presets/slim-agents-for-codex/`, removes inactive managed roles such as Observer, replaces only the two managed Slim Skills, preserves unrelated custom roles and Skills, and post-validates the installation. These checks do not prove model entitlement or hard MCP isolation. Start a new Codex task after changing agent configuration.
+`convert --check` is non-mutating and fails when generated agent TOMLs, `config.snippet.toml`, manifests, aliases, or Skill files differ from the committed snapshots. `validate --preset ID` compares parsed role semantics with the selected generator source; `validate --codex-home DIR` also resolves installed `agents/<role>.toml` paths from that directory's `config.toml` and requires `--skills-home DIR` so the exact packaged managed Skills cannot be skipped silently. Portable role files keep reviewed MCP denylists in `developer_instructions` and emit no partial `mcp_servers` tables, because standalone parsing and parent transport merging make partial or dummy transports invalid. `switch-preset` backs up the config before changing live agents or Skills, archives existing managed role files and managed Skills under `agent-presets/slim-agents-for-codex/`, removes inactive managed roles such as Observer, replaces only the managed Slim Skills from the active preset, preserves unrelated custom roles and Skills, and post-validates the installation. These checks do not prove model entitlement or hard MCP isolation. Start a new Codex task after changing agent configuration.
 
 ## Development
 

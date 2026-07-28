@@ -4,18 +4,18 @@
   "description": "Deterministic oh-my-opencode-slim agent presets for Codex",
   "private": true,
   "type": "module",
-  "author": "WANGCHIENCHIH",
+  "author": "qinyinglun",
   "keywords": ["codex", "agents", "toml", "presets", "cli"],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/WANGCHIENCHIH/slim-agents-for-codex.git"
+    "url": "git+https://github.com/qinyinglun/slim-agents-for-codex.git"
   },
-  "homepage": "https://github.com/WANGCHIENCHIH/slim-agents-for-codex#readme",
+  "homepage": "https://github.com/qinyinglun/slim-agents-for-codex#readme",
   "bugs": {
-    "url": "https://github.com/WANGCHIENCHIH/slim-agents-for-codex/issues"
+    "url": "https://github.com/qinyinglun/slim-agents-for-codex/issues"
   },
   "bin": { "slim-agents-codex": "dist/cli.js" },
-  "files": ["dist", "presets", ".agents/skills/slim-orchestration", ".agents/skills/slim-council", "docs/adding-a-preset.md", "docs/adding-a-preset.zh-TW.md", "docs/preset-lifecycle.md", "docs/slim-codex-architecture.md", "docs/council-expert-agents.md", "README.md", "README.zh-TW.md", "LICENSE", "NOTICE.md"],
+  "files": ["dist", "presets", "docs/adding-a-preset.md", "docs/adding-a-preset.zh-CN.md", "docs/preset-lifecycle.md", "docs/slim-codex-architecture.md", "docs/council-expert-agents.md", "README.md", "README.zh-CN.md", "LICENSE", "NOTICE.md"],
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "tsc -p tsconfig.json",

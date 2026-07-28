@@ -1,10 +1,15 @@
 import { copyFile, cp, mkdir, readFile, readdir, realpath, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { generatePreset, managedRoleNames } from "./presets.js";
+import { generatePreset, managedRoleNames, managedSkillNames } from "./presets.js";
 
-export const managedSkillNames = ["slim-council", "slim-orchestration"] as const;
-export const packagedSkillsHome = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", ".agents", "skills");
+function packageRoot(): string {
+  return resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+}
+
+export function skillsSourceDir(presetId: string, skillName: string): string {
+  return join(packageRoot(), "presets", presetId, "skills", skillName);
+}
 
 export interface InstallRequest { codexHome: string; preset: string; mode?: "install" | "switch"; skillsHome?: string }
 export interface InstallPreview {
@@ -22,13 +27,14 @@ export interface InstallPreview {
   existingManagedSkills: string[];
   installSkills: boolean;
   resolvedPreset: string;
+  skillNames: readonly string[];
 }
 
 function configuredManagedRoles(text: string): string[] {
   return managedRoleNames.filter((name) => new RegExp(`^\\[agents\\.${name}\\]$`, "m").test(text));
 }
 
-function stripManagedRoleSections(text: string, newline: string): string {
+function stripManagedSections(text: string, newline: string): string {
   const managed = new Set(managedRoleNames);
   const output: string[] = [];
   let skipping = false;
@@ -36,7 +42,8 @@ function stripManagedRoleSections(text: string, newline: string): string {
     const header = line.match(/^\s*\[([^\]]+)\]\s*$/);
     if (header) {
       const role = header[1].match(/^agents\.([^.]+)$/);
-      skipping = Boolean(role && managed.has(role[1]));
+      const isManagedSection = header[1].startsWith("mcp_servers.");
+      skipping = Boolean((role && managed.has(role[1])) || isManagedSection);
     }
     if (!skipping) output.push(line);
   }
@@ -46,7 +53,7 @@ function stripManagedRoleSections(text: string, newline: string): string {
 function updateConfig(text: string, newline: string, generated: ReturnType<typeof generatePreset>, mode: "install" | "switch"): string {
   const configured = configuredManagedRoles(text);
   if (mode === "install" && configured.length > 0) throw new Error(`Existing role conflict: ${configured[0]}`);
-  const editable = mode === "switch" ? stripManagedRoleSections(text, newline) : text;
+  const editable = mode === "switch" ? stripManagedSections(text, newline) : text;
   const headers = [...editable.matchAll(/^\[agents\]\s*$/gm)];
   if (headers.length !== 1 || headers[0].index === undefined) throw new Error("Expected one [agents] table");
   const sectionStart = headers[0].index + headers[0][0].length;
@@ -98,13 +105,13 @@ async function sameLocation(left: string, right: string): Promise<boolean> {
   return await canonicalPath(left) === await canonicalPath(right);
 }
 
-async function existingManagedSkillDirectories(skillsHome: string): Promise<string[]> {
+async function existingManagedSkillDirectories(skillsHome: string, names: readonly string[]): Promise<string[]> {
   const existing: string[] = [];
-  for (const name of managedSkillNames) if (await pathExists(join(skillsHome, name))) existing.push(name);
+  for (const name of names) if (await pathExists(join(skillsHome, name))) existing.push(name);
   return existing;
 }
 
-async function filesBelow(root: string, directory = root): Promise<string[]> {
+export async function filesBelow(root: string, directory = root): Promise<string[]> {
   const files: string[] = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name);
@@ -114,9 +121,9 @@ async function filesBelow(root: string, directory = root): Promise<string[]> {
   return files.sort();
 }
 
-export async function validateInstalledSkills(skillsHome: string): Promise<void> {
-  for (const name of managedSkillNames) {
-    const source = join(packagedSkillsHome, name);
+export async function validateInstalledSkills(presetId: string, skillsHome: string, skillNames: readonly string[] = managedSkillNames): Promise<void> {
+  for (const name of skillNames) {
+    const source = skillsSourceDir(presetId, name);
     const target = join(skillsHome, name);
     let expectedFiles: string[];
     let actualFiles: string[];
@@ -160,9 +167,10 @@ export async function previewInstall(request: InstallRequest): Promise<InstallPr
   const activeFiles = new Set(Object.keys(generated.agents).map((name) => `${name}.toml`));
   const inactiveManagedFiles = existingManagedFiles.filter((name) => !activeFiles.has(name));
   const skillsHome = resolve(request.skillsHome ?? join(request.codexHome, "skills"));
-  const installSkills = !await sameLocation(skillsHome, packagedSkillsHome);
-  for (const name of managedSkillNames) await readFile(join(packagedSkillsHome, name, "SKILL.md"));
-  const existingManagedSkills = installSkills ? await existingManagedSkillDirectories(skillsHome) : [];
+  const resolvedId = generated.preset.id;
+  const installSkills = !await sameLocation(skillsHome, skillsSourceDir(resolvedId, generated.skillNames[0]));
+  for (const name of generated.skillNames) await readFile(join(skillsSourceDir(resolvedId, name), "SKILL.md"));
+  const existingManagedSkills = installSkills ? await existingManagedSkillDirectories(skillsHome, generated.skillNames) : [];
   return {
     request,
     configPath,
@@ -177,7 +185,8 @@ export async function previewInstall(request: InstallRequest): Promise<InstallPr
     skillsHome,
     existingManagedSkills,
     installSkills,
-    resolvedPreset: generated.preset.id,
+    resolvedPreset: resolvedId,
+    skillNames: generated.skillNames,
   };
 }
 
@@ -197,9 +206,9 @@ export async function installPreset(preview: InstallPreview) {
   for (const [name, content] of Object.entries(preview.files)) await writeFile(join(target, `${name}.toml`), content, "utf8");
   if (preview.installSkills) {
     await mkdir(preview.skillsHome, { recursive: true });
-    for (const name of managedSkillNames) {
+    for (const name of preview.skillNames) {
       await rm(join(preview.skillsHome, name), { recursive: true, force: true });
-      await cp(join(packagedSkillsHome, name), join(preview.skillsHome, name), { recursive: true });
+      await cp(skillsSourceDir(preview.resolvedPreset, name), join(preview.skillsHome, name), { recursive: true });
     }
   }
   const temp = `${preview.configPath}.tmp-${process.pid}`;
