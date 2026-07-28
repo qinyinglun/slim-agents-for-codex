@@ -1,0 +1,35 @@
+[agents]
+max_threads = 6
+max_depth = 2
+
+[agents.orchestrator]
+description = "执行团队协调者，通过五个 Slim 专家实现 root 审批通过的方案。"
+config_file = "agents/orchestrator.toml"
+
+[agents.oracle]
+description = "只读战略顾问，负责架构、疑难调试、风险、简化和代码审查。"
+config_file = "agents/oracle.toml"
+
+[agents.librarian]
+description = "只读专家，负责官方文档、权威来源和库研究。"
+config_file = "agents/librarian.toml"
+
+[agents.explorer]
+description = "快速只读代码库侦察，查找文件、符号、模式、视觉证据和相关行。"
+config_file = "agents/explorer.toml"
+
+[agents.designer]
+description = "UI/UX 设计、视觉审查和实现专家，负责用户可见的质量和精致度。"
+config_file = "agents/designer.toml"
+
+[agents.fixer]
+description = "有限实现专家，执行明确的规范，不进行研究或架构扩展。"
+config_file = "agents/fixer.toml"
+
+[agents.council]
+description = "Council 主席，根据描述选择匹配的已安装 agent 并综合其独立意见。"
+config_file = "agents/council.toml"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@context7/context7-server"]
