@@ -30,10 +30,13 @@ Do not draw from arbitrary custom roles. Do not spawn `orchestrator`, `council`,
    - objective and non-goals;
    - constraints and assumptions;
    - verified evidence and open questions;
+   - research findings accepted from `librarian` as confirmed context;
    - work phases and dependencies;
    - lane owners and write ownership;
    - validation gates, failures, and recovery decisions;
    - final verification and unresolved risk.
+
+Keep `.slim/deepwork/` strictly for progress files. Save code and documentation deliverables to project paths (`src/`, `docs/`).
 
 The state file is a recovery aid, not a substitute for reporting meaningful checkpoints to Root.
 
@@ -45,6 +48,7 @@ The state file is a recovery aid, not a substitute for reporting meaningful chec
 4. Ask `oracle` to review the plan before risky, irreversible, security-sensitive, or cross-cutting implementation.
 5. If visual or interaction work is material, obtain a concrete `designer` handoff before assigning implementation. The handoff must state the intended behavior, states, and acceptance evidence.
 6. Assign implementation to `fixer`, or to `designer` when the owned deliverable is specifically visual or interaction-focused.
+7. Before dispatch, show Root a compact overview containing only the phase titles and order, each delegated specialist with its ownership or scope, and the total planned Oracle reviews with the gate after each phase and a short reason for each gate.
 
 Do not dispatch implementation from an unreviewed guess when the missing evidence can change the implementation direction.
 
@@ -61,13 +65,36 @@ Do not dispatch implementation from an unreviewed guess when the missing evidenc
 
 ## Validate each phase
 
-After every implementation phase:
+Plan a small number of coherent phases from the task's dependencies and delivery boundaries before dispatch, and record the phase order and review gates in the state file. After every planned implementation phase:
 
 1. Inspect the actual diff or artifact, not only the specialist summary.
 2. Run the focused checks that encode the phase's intent.
-3. Ask `oracle` for a second review when the phase changes architecture, security boundaries, data contracts, or rollout risk.
-4. Record results and remaining risk in the deep-work state file.
-5. Continue only when the current gate passes or Root explicitly accepts the documented exception.
+3. Ask `oracle` to review the phase result as an automatic gate before continuing.
+4. Before the Oracle review, add relevant confirmed research findings and file references to the state file so Oracle assesses the decision from accepted context instead of redoing discovery.
+5. Triage and batch material actionable Oracle findings into one bounded remediation pass, then validate it with focused evidence; request a follow-up Oracle review only if that remediation changes the reviewed decision or risk.
+6. Record results and remaining risk in the state file.
+7. Continue only when the current gate passes or Root explicitly accepts the documented exception.
+
+Avoid micro-phases created only to make reviews smaller or cheaper. Larger, complex tasks can have broader phases, broader patches, and correspondingly broader phase reviews. Never add an extra Oracle review merely to re-confirm a mechanical fixer change.
+
+## Scheduler discipline
+
+- Record each spawned agent by its task name or identity, its ownership or scope, and its actual status.
+- Wait for hook-driven background completion before consuming a background result; do not advance to the next phase while relevant lanes are running or terminal results are unreconciled.
+- If no independent work remains while a lane runs, stop briefly instead of blocking or fabricating results.
+- Reconcile shared-worktree changes across concurrent writers before integration.
+
+## Designer handoff guardrail
+
+When a phase includes `designer`, treat the delivered UI/UX as accepted design intent for later phases. Record important design decisions in the state file before continuing.
+
+After designer work:
+
+- preserve layout, rhythm, hierarchy, motion, spacing, color, affordances, responsiveness, and component feel;
+- review and improve user-facing copy with grounded, normal wording, but do not change visual structure or interaction intent;
+- route follow-up visual, responsive, motion, hierarchy, polish, or component-feel changes back to `designer`;
+- use `fixer` only for bounded mechanical follow-up that preserves the design exactly, such as wiring, tests, type fixes, or non-visual behavior changes;
+- if design intent must change, record why in the state file before changing it.
 
 ## Return to Root
 
