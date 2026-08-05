@@ -14,12 +14,17 @@
 
 ### 安装 GitHub Release 包
 
-从对应的 GitHub Release 下载 `slim-agents-for-codex-0.2.0.tgz`，然后运行：
+从对应的 GitHub Release 下载 `slim-agents-for-codex-0.2.0.tgz`。先安装该包以提供 CLI：
 
 ```bash
 npm install --global ./slim-agents-for-codex-0.2.0.tgz
+```
+
+此步骤只安装 `slim-agents-codex` CLI，**不会**创建任何 Codex agent 文件。请单独应用 preset：
+
+```bash
 slim-agents-codex list-presets
-slim-agents-codex install --preset openai-5.6-en --scope global
+slim-agents-codex install --preset latest --scope global --yes
 ```
 
 如果已安装 `0.1.x` preset，请改用 `slim-agents-codex switch-preset --preset openai-5.6-en --scope global`。切换时会先归档将被替换的受管 agents 与 Skills，再对新安装执行后验证。
@@ -30,10 +35,12 @@ slim-agents-codex install --preset openai-5.6-en --scope global
 npm ci
 npm run build
 node dist/cli.js list-presets
-node dist/cli.js install --preset openai-5.6-en
+node dist/cli.js install --preset latest --scope global --yes
 ```
 
-`install` 在写入前会显示实际解析的固定版本、配置文件路径、Skill 路径和备份路径，并要求确认；它会同时安装选定的 agent preset 与两个受管 Slim Skills。`--scope global` 使用 `CODEX_HOME`（或 `~/.codex`）及 `$HOME/.agents/skills`，`--scope project` 使用当前项目的 `.codex` 及 `.agents/skills`；明确提供的 `--codex-home PATH` 和 `--skills-home PATH` 选项会覆盖对应目标。仅在明确需要非交互式安装时使用 `--yes`。
+`install` 在写入前会显示实际解析的固定版本、配置文件路径、Skill 路径和备份路径，并要求确认；它会同时安装选定的 agent preset 与两个受管 Slim Skills。使用 `--scope global` 时，agent 文件写入设置了 `CODEX_HOME` 时的 `$CODEX_HOME/agents`，否则写入 `~/.codex/agents`；Skills 写入 `$HOME/.agents/skills`。使用 `--scope project` 时，agent 文件写入 `<current-project>/.codex/agents`，Skills 写入 `<current-project>/.agents/skills`。明确提供的 `--codex-home PATH` 和 `--skills-home PATH` 选项会覆盖对应目标。`config:` 和 `installed ... at ...` 输出行是实际目标路径的权威依据。仅在明确需要非交互式安装时使用 `--yes`。
+
+如果文件出现在意外的位置，请检查 `echo "$CODEX_HOME"`，并以 CLI 打印的路径为准。在 `sudo` 下、容器内或以不同 shell 用户运行时，`~` 可能不同，因而安装目标也会改变。
 
 可用 presets：
 
@@ -45,7 +52,7 @@ node dist/cli.js install --preset openai-5.6-en
 
 ## 手动安装
 
-每个 npm 包和源代码检出都包含可直接复制的文件，位于 `presets/<id>/agents/` 和 `presets/<id>/skills/` 下。将选定 preset 的所有 TOML 复制到 `CODEX_HOME/agents/`（全局安装）或 `<project>/.codex/agents/`（项目安装），然后将 snippet 合并到对应的 `config.toml`。将 `skills/<name>/` 目录复制到 `$HOME/.agents/skills/`（全局）或 `<project>/.agents/skills/`（项目）。两种 scope 都使用 `config_file = "agents/<role>.toml"`，由声明角色的 config 文件所在位置解析。保留原始 UTF-8 编码、BOM 状态和换行格式，并先做备份。
+每个 npm 包和源代码检出都包含可直接复制的文件，位于 `presets/<id>/agents/` 和 `presets/<id>/skills/` 下。全局安装时，若设置了 `CODEX_HOME`，将选定 preset 的所有 TOML 复制到 `$CODEX_HOME/agents/`，否则复制到 `~/.codex/agents/`；项目安装时复制到 `<project>/.codex/agents/`。然后将 snippet 合并到对应的 `config.toml`。将 `skills/<name>/` 目录复制到 `$HOME/.agents/skills/`（全局）或 `<project>/.agents/skills/`（项目）。两种 scope 都使用 `config_file = "agents/<role>.toml"`，由声明角色的 config 文件所在位置解析。保留原始 UTF-8 编码、BOM 状态和换行格式，并先做备份。
 
 CLI 遵循相同的布局。全局位置使用 `--scope global`，在项目根目录使用 `--scope project`；仅在需要明确指定其他位置时使用 `--codex-home DIR`。
 

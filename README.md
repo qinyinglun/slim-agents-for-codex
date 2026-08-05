@@ -14,12 +14,17 @@ This project is distributed through GitHub rather than the npm registry.
 
 ### Install a GitHub Release package
 
-Download `slim-agents-for-codex-0.2.0.tgz` from the matching GitHub Release, then run:
+Download `slim-agents-for-codex-0.2.0.tgz` from the matching GitHub Release. First install the package to make the CLI available:
 
 ```bash
 npm install --global ./slim-agents-for-codex-0.2.0.tgz
+```
+
+This installs only the `slim-agents-codex` CLI; it does **not** create any Codex agent files. Apply a preset separately:
+
+```bash
 slim-agents-codex list-presets
-slim-agents-codex install --preset openai-5.6-en --scope global
+slim-agents-codex install --preset latest --scope global --yes
 ```
 
 If a `0.1.x` preset is already installed, use `slim-agents-codex switch-preset --preset openai-5.6-en --scope global` instead. The switch archives the managed agents and Skills it replaces before post-validating the new installation.
@@ -33,7 +38,9 @@ node dist/cli.js list-presets
 node dist/cli.js install --preset openai-5.6-en
 ```
 
-`install` previews the resolved immutable preset, config path, Skill path, and backup path before asking for confirmation. It installs both the selected agent preset and the two managed Slim Skills. Use `--scope global` for `CODEX_HOME` (or `~/.codex`) plus `$HOME/.agents/skills`, and `--scope project` for the current project's `.codex` plus `.agents/skills`. Explicit `--codex-home PATH` and `--skills-home PATH` options override those targets. Use `--yes` only for explicit non-interactive installation.
+`install` previews the resolved immutable preset, config path, Skill path, and backup path before asking for confirmation. It installs both the selected agent preset and the two managed Slim Skills. With `--scope global`, agent files are written to `$CODEX_HOME/agents` when `CODEX_HOME` is set, otherwise to `~/.codex/agents`; Skills go to `$HOME/.agents/skills`. With `--scope project`, agent files are written to `<current-project>/.codex/agents` and Skills to `<current-project>/.agents/skills`. Explicit `--codex-home PATH` and `--skills-home PATH` options override those targets. The `config:` and `installed ... at ...` output lines are authoritative for the actual target paths. Use `--yes` only for explicit non-interactive installation.
+
+If files appear in an unexpected location, inspect `echo "$CODEX_HOME"` and use the paths printed by the CLI. Running under `sudo`, in a container, or as a different shell user can change `~` and therefore the installation target.
 
 Available presets:
 
@@ -45,7 +52,7 @@ Preset-specific Skill files are bundled under each preset directory and installe
 
 ## Manual installation
 
-Every npm package and source checkout includes ready-to-copy files under `presets/<id>/agents/` and `presets/<id>/skills/`. Copy every TOML from the selected preset into `CODEX_HOME/agents/` for a global installation or `<project>/.codex/agents/` for a project installation, then merge the snippet into the matching `config.toml`. Copy the `skills/<name>/` directories into `$HOME/.agents/skills/` globally or `<project>/.agents/skills/` for one repository. In both scopes, `config_file = "agents/<role>.toml"` resolves relative to the config file that declares the role, as specified by the [Codex Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference). Preserve UTF-8 encoding, BOM state, and line endings, and make backups first.
+Every npm package and source checkout includes ready-to-copy files under `presets/<id>/agents/` and `presets/<id>/skills/`. Copy every TOML from the selected preset into `$CODEX_HOME/agents/` when `CODEX_HOME` is set, otherwise `~/.codex/agents/`, for a global installation; use `<project>/.codex/agents/` for a project installation. Then merge the snippet into the matching `config.toml`. Copy the `skills/<name>/` directories into `$HOME/.agents/skills/` globally or `<project>/.agents/skills/` for one repository. In both scopes, `config_file = "agents/<role>.toml"` resolves relative to the config file that declares the role, as specified by the [Codex Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference). Preserve UTF-8 encoding, BOM state, and line endings, and make backups first.
 
 The CLI follows the same layout. Use `--scope global` for the global location or `--scope project` from a project root; use `--codex-home DIR` only when an explicit location is needed.
 
