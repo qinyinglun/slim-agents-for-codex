@@ -25,6 +25,7 @@ export interface Preset {
   models: Record<string, { model: string; effort: Effort }>;
   mcpServers?: Record<string, McpServerConfig>;
   skillNames?: readonly string[];
+  skillSourcePreset?: string;
 }
 
 const roleSources: Record<string, RoleSource> = {
@@ -46,12 +47,12 @@ export const presets: Record<string, Preset> = {
     status: "supported",
     snapshotFormatVersion: 1,
     models: mapping({
-      orchestrator: ["gpt-5.6-terra", "medium"],
+      orchestrator: ["gpt-5.6-terra", "high"],
       oracle: ["gpt-5.6-sol", "high"],
       librarian: ["gpt-5.6-luna", "low"],
       explorer: ["gpt-5.6-luna", "low"],
       designer: ["gpt-5.6-luna", "medium"],
-      fixer: ["gpt-5.6-luna", "medium"],
+      fixer: ["gpt-5.6-luna", "high"],
       council: ["gpt-5.6-sol", "high"],
     }),
     mcpServers: {
@@ -72,12 +73,12 @@ export const presets: Record<string, Preset> = {
     status: "supported",
     snapshotFormatVersion: 1,
     models: mapping({
-      orchestrator: ["gpt-5.6-terra", "medium"],
+      orchestrator: ["gpt-5.6-terra", "high"],
       oracle: ["gpt-5.6-sol", "high"],
       librarian: ["gpt-5.6-luna", "low"],
       explorer: ["gpt-5.6-luna", "low"],
       designer: ["gpt-5.6-luna", "medium"],
-      fixer: ["gpt-5.6-luna", "medium"],
+      fixer: ["gpt-5.6-luna", "high"],
       council: ["gpt-5.6-sol", "high"],
     }),
     mcpServers: {
@@ -98,11 +99,11 @@ export const presets: Record<string, Preset> = {
     status: "supported",
     snapshotFormatVersion: 1,
     models: mapping({
-      orchestrator: ["gpt-5.6-terra", "medium"],
+      orchestrator: ["gpt-5.6-terra", "high"],
       oracle: ["gpt-5.6-sol", "high"],
       librarian: ["gpt-5.6-luna", "low"],
       explorer: ["gpt-5.6-luna", "low"],
-      fixer: ["gpt-5.6-luna", "medium"],
+      fixer: ["gpt-5.6-luna", "high"],
       council: ["gpt-5.6-sol", "high"],
     }),
     mcpServers: {
@@ -113,9 +114,80 @@ export const presets: Record<string, Preset> = {
     },
     skillNames: managedSkillNames,
   },
+  "openai-6-en": {
+    id: "openai-6-en",
+    adapter: "oh-my-opencode-slim",
+    adapterSchemaVersion: 2,
+    source: "alvinunreal/oh-my-opencode-slim",
+    sourceVersion: "slim-codex-2026-07",
+    created: "2026-09-21",
+    status: "supported",
+    snapshotFormatVersion: 1,
+    models: mapping({
+      orchestrator: ["gpt-6-sol", "high"],
+      oracle: ["gpt-6-astra", "high"],
+      librarian: ["gpt-6-luna", "low"],
+      explorer: ["gpt-6-luna", "low"],
+      designer: ["gpt-6-luna", "medium"],
+      fixer: ["gpt-6-sol", "high"],
+      council: ["gpt-6-astra", "high"],
+    }),
+    mcpServers: {
+      context7: { command: "npx", args: ["-y", "@context7/context7-server"] },
+    },
+    skillNames: managedSkillNames,
+    skillSourcePreset: "openai-5.6-en",
+  },
+  "openai-6-zh": {
+    id: "openai-6-zh",
+    adapter: "oh-my-opencode-slim",
+    adapterSchemaVersion: 2,
+    source: "alvinunreal/oh-my-opencode-slim",
+    sourceVersion: "slim-codex-2026-07-zh",
+    created: "2026-09-21",
+    status: "supported",
+    snapshotFormatVersion: 1,
+    models: mapping({
+      orchestrator: ["gpt-6-sol", "high"],
+      oracle: ["gpt-6-astra", "high"],
+      librarian: ["gpt-6-luna", "low"],
+      explorer: ["gpt-6-luna", "low"],
+      designer: ["gpt-6-luna", "medium"],
+      fixer: ["gpt-6-sol", "high"],
+      council: ["gpt-6-astra", "high"],
+    }),
+    mcpServers: {
+      context7: { command: "npx", args: ["-y", "@context7/context7-server"] },
+    },
+    skillNames: managedSkillNames,
+    skillSourcePreset: "openai-5.6-zh",
+  },
+  "openai-6-zh-nodesigner": {
+    id: "openai-6-zh-nodesigner",
+    adapter: "oh-my-opencode-slim",
+    adapterSchemaVersion: 2,
+    source: "alvinunreal/oh-my-opencode-slim",
+    sourceVersion: "slim-codex-2026-07-zh-no-designer",
+    created: "2026-09-21",
+    status: "supported",
+    snapshotFormatVersion: 1,
+    models: mapping({
+      orchestrator: ["gpt-6-sol", "high"],
+      oracle: ["gpt-6-astra", "high"],
+      librarian: ["gpt-6-luna", "low"],
+      explorer: ["gpt-6-luna", "low"],
+      fixer: ["gpt-6-sol", "high"],
+      council: ["gpt-6-astra", "high"],
+    }),
+    mcpServers: {
+      context7: { command: "npx", args: ["-y", "@context7/context7-server"] },
+    },
+    skillNames: managedSkillNames,
+    skillSourcePreset: "openai-5.6-zh-nodesigner",
+  },
 };
 
-export const aliases = { latest: "openai-5.6-en", recommended: "openai-5.6-en" } as const;
+export const aliases = { latest: "openai-6-en", recommended: "openai-6-en" } as const;
 export const roles = slimCodex202607RoleSource.roles;
 export const roleOrder = [...slimCodex202607RoleSource.roleOrder];
 export const managedRoleNames = [...new Set(Object.values(roleSources).flatMap((source) => source.roleOrder))];

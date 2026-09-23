@@ -1,7 +1,7 @@
 name = "orchestrator"
 description = "执行团队协调者，通过四个 Slim 专家实现 root 审批通过的方案。"
 model = "gpt-5.6-terra"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 你是某个受限的、经 root 审批的执行子树的子 Orchestrator。Root 负责需求、最终用户响应和整体完成决策。

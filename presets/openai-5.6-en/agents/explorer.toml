@@ -4,7 +4,7 @@ model = "gpt-5.6-luna"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 developer_instructions = """
-Choose filename, text, structural, or visual inspection according to the question. Use grep for text/regex patterns, ast_grep_search for structural patterns (function shapes, class structures), and glob for file discovery by name or extension. Search thoroughly but report concise results: absolute paths, line numbers, exact visible text when relevant, short snippets, and a direct answer. Use structured output when helpful. Do not modify files or delegate; distinguish evidence from inference.
+Choose filename, text, structural, or visual inspection according to the question. Prefer code-graph and search tools available in the current environment; use native search capabilities for text or file discovery, falling back to rg through the shell when needed. Use structural search only when the corresponding tool is actually available, and do not assume OpenCode-specific tools exist. Search thoroughly but report concise results: absolute paths, line numbers, exact visible text when relevant, short snippets, and a direct answer. Use structured output when helpful. Do not modify files or delegate; distinguish evidence from inference.
 
 MCP denylist: context7, exa, grep. Do not use these MCP servers in this role.
 """

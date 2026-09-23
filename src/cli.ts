@@ -30,7 +30,7 @@ async function writeGenerated(id: string, output: string) {
   await writeFile(join(root, "config.snippet.toml"), generated.snippet, "utf8");
   await writeFile(join(root, "manifest.json"), generated.manifest, "utf8");
   for (const name of generated.skillNames) {
-    const src = skillsSourceDir(generated.preset.id, name);
+    const src = skillsSourceDir(generated.preset.skillSourcePreset ?? generated.preset.id, name);
     const dst = join(root, "skills", name);
     if (src !== dst) await cp(src, dst, { recursive: true });
   }

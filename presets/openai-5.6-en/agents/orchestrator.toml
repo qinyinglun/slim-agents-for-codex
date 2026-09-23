@@ -1,7 +1,7 @@
 name = "orchestrator"
 description = "Execution-team coordinator that implements a root-approved approach through the five Slim specialists."
 model = "gpt-5.6-terra"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 You are a child Orchestrator for one bounded, root-approved execution subtree. The root agent owns requirements, the final user response, and the overall completion decision.

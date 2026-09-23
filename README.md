@@ -27,7 +27,7 @@ slim-agents-codex list-presets
 slim-agents-codex install --preset latest --scope global --yes
 ```
 
-If a `0.1.x` preset is already installed, use `slim-agents-codex switch-preset --preset openai-5.6-en --scope global` instead. The switch archives the managed agents and Skills it replaces before post-validating the new installation.
+If any Slim preset is already installed, use `slim-agents-codex switch-preset --preset latest --scope global` instead. The switch archives the managed agents and Skills it replaces before post-validating the new installation. The plain `install` command intentionally stops before overwriting managed roles.
 
 ### Run from a source checkout
 
@@ -35,7 +35,7 @@ If a `0.1.x` preset is already installed, use `slim-agents-codex switch-preset -
 npm ci
 npm run build
 node dist/cli.js list-presets
-node dist/cli.js install --preset openai-5.6-en
+node dist/cli.js install --preset latest --scope global
 ```
 
 `install` previews the resolved immutable preset, config path, Skill path, and backup path before asking for confirmation. It installs both the selected agent preset and the two managed Slim Skills. With `--scope global`, agent files are written to `$CODEX_HOME/agents` when `CODEX_HOME` is set, otherwise to `~/.codex/agents`; Skills go to `$HOME/.agents/skills`. With `--scope project`, agent files are written to `<current-project>/.codex/agents` and Skills to `<current-project>/.agents/skills`. Explicit `--codex-home PATH` and `--skills-home PATH` options override those targets. The `config:` and `installed ... at ...` output lines are authoritative for the actual target paths. Use `--yes` only for explicit non-interactive installation.
@@ -44,11 +44,18 @@ If files appear in an unexpected location, inspect `echo "$CODEX_HOME"` and use 
 
 Available presets:
 
-- `openai-5.6-en` — English prompts and Skills (default, recommended), 7 roles with designer
+- `openai-6-en` — English prompts and Skills (default, recommended), 7 roles with designer; Astra for Oracle/Council, Sol for Orchestrator/Fixer, Luna for focused specialist lanes
+- `openai-6-zh` — Chinese (Simplified) prompts and Skills, 7 roles with the same tiered model mapping
+- `openai-6-zh-nodesigner` — Chinese (Simplified) prompts and Skills, 6 roles without designer (server-side), with the same tiered model mapping
+- `openai-5.6-en` — English prompts and Skills, 7 roles with designer
 - `openai-5.6-zh` — Chinese (Simplified) prompts and Skills, 7 roles with designer
 - `openai-5.6-zh-nodesigner` — Chinese (Simplified) prompts and Skills, 6 roles without designer (server-side)
 
 Preset-specific Skill files are bundled under each preset directory and installed automatically.
+
+GPT-6 model availability still depends on the Codex account or API credentials in use; the installer validates package integrity and configuration, not model entitlement.
+
+The GPT-5.6 presets mirror the upstream OpenAI mapping: Orchestrator uses `gpt-5.6-terra` at `high`; Oracle and the Codex Council adaptation use `gpt-5.6-sol` at `high`; Librarian and Explorer use `gpt-5.6-luna` at `low`; Designer uses Luna at `medium`; Fixer uses Luna at `high`. GPT-6 presets use all three GPT-6 tiers: Oracle and Council use `gpt-6-astra/high` for independent high-stakes analysis, Orchestrator and Fixer use `gpt-6-sol/high` for coordinated implementation, and Librarian/Explorer use `gpt-6-luna/low` while Designer uses Luna at `medium`.
 
 ## Manual installation
 

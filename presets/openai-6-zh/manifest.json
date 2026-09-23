@@ -1,0 +1,10 @@
+{
+  "id": "openai-6-zh",
+  "adapter": "oh-my-opencode-slim",
+  "adapterSchemaVersion": 2,
+  "source": "alvinunreal/oh-my-opencode-slim",
+  "sourceVersion": "slim-codex-2026-07-zh",
+  "created": "2026-09-21",
+  "status": "supported",
+  "snapshotFormatVersion": 1
+}

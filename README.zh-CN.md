@@ -27,7 +27,7 @@ slim-agents-codex list-presets
 slim-agents-codex install --preset latest --scope global --yes
 ```
 
-如果已安装 `0.1.x` preset，请改用 `slim-agents-codex switch-preset --preset openai-5.6-en --scope global`。切换时会先归档将被替换的受管 agents 与 Skills，再对新安装执行后验证。
+如果已安装任一 Slim preset，请改用 `slim-agents-codex switch-preset --preset latest --scope global`。切换时会先归档将被替换的受管 agents 与 Skills，再对新安装执行后验证。普通的 `install` 会在覆盖受管角色前停止。
 
 ### 从源代码运行
 
@@ -44,11 +44,18 @@ node dist/cli.js install --preset latest --scope global --yes
 
 可用 presets：
 
-- `openai-5.6-en` — 英文提示词和 Skills（默认，推荐），7 个角色含 designer
+- `openai-6-en` — 英文提示词和 Skills（默认、推荐），7 个角色含 designer；Oracle/Council 使用 Astra，Orchestrator/Fixer 使用 Sol，专门专家通道使用 Luna
+- `openai-6-zh` — 中文（简体）提示词和 Skills，7 个角色，采用相同的分层模型映射
+- `openai-6-zh-nodesigner` — 中文（简体）提示词和 Skills，6 个角色不含 designer（服务端场景），采用相同的分层模型映射
+- `openai-5.6-en` — 英文提示词和 Skills，7 个角色含 designer
 - `openai-5.6-zh` — 中文（简体）提示词和 Skills，7 个角色含 designer
 - `openai-5.6-zh-nodesigner` — 中文（简体）提示词和 Skills，6 个角色不含 designer（服务端场景）
 
 预设特定的 Skill 文件打包在每个 preset 目录下，安装时自动部署。
+
+GPT-6 模型是否可用取决于所使用的 Codex 账号或 API 凭据；安装器验证包完整性和配置，不验证模型权限。
+
+GPT-5.6 presets 与上游 OpenAI 映射保持一致：Orchestrator 使用 `gpt-5.6-terra/high`；Oracle 和 Codex 新增的 Council 适配使用 `gpt-5.6-sol/high`；Librarian、Explorer 使用 `gpt-5.6-luna/low`；Designer 使用 Luna/medium；Fixer 使用 Luna/high。GPT-6 presets 使用全部三个 GPT-6 层级：Oracle 和 Council 用 `gpt-6-astra/high` 做独立的高风险分析，Orchestrator 和 Fixer 用 `gpt-6-sol/high` 做协调与实施，Librarian/Explorer 用 `gpt-6-luna/low`，Designer 用 Luna/medium。
 
 ## 手动安装
 

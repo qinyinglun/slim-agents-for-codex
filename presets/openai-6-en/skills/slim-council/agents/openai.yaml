@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slim Council"
+  short_description: "Assemble expert councils for decisions and risk"
+  default_prompt: "Use $slim-council to assemble the right expert agents, evaluate viable approaches, and surface risks."

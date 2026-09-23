@@ -34,16 +34,17 @@ function configuredManagedRoles(text: string): string[] {
   return managedRoleNames.filter((name) => new RegExp(`^\\[agents\\.${name}\\]$`, "m").test(text));
 }
 
-function stripManagedSections(text: string, newline: string): string {
+function stripManagedSections(text: string, newline: string, managedMcpNames: readonly string[]): string {
   const managed = new Set(managedRoleNames);
+  const managedMcps = new Set(managedMcpNames);
   const output: string[] = [];
   let skipping = false;
   for (const line of text.split(newline)) {
     const header = line.match(/^\s*\[([^\]]+)\]\s*$/);
     if (header) {
       const role = header[1].match(/^agents\.([^.]+)$/);
-      const isManagedSection = header[1].startsWith("mcp_servers.");
-      skipping = Boolean((role && managed.has(role[1])) || isManagedSection);
+      const mcp = header[1].match(/^mcp_servers\.([^.]+)(?:\.|$)/);
+      skipping = Boolean((role && managed.has(role[1])) || (mcp && managedMcps.has(mcp[1])));
     }
     if (!skipping) output.push(line);
   }
@@ -52,17 +53,25 @@ function stripManagedSections(text: string, newline: string): string {
 
 function updateConfig(text: string, newline: string, generated: ReturnType<typeof generatePreset>, mode: "install" | "switch"): string {
   const configured = configuredManagedRoles(text);
-  if (mode === "install" && configured.length > 0) throw new Error(`Existing role conflict: ${configured[0]}`);
-  const editable = mode === "switch" ? stripManagedSections(text, newline) : text;
+  if (mode === "install" && configured.length > 0) {
+    throw new Error(`Existing role conflict: ${configured[0]}. Use switch-preset to archive and replace the managed Slim agents safely.`);
+  }
+  const editable = mode === "switch"
+    ? stripManagedSections(text, newline, Object.keys(generated.preset.mcpServers ?? {}))
+    : text;
   const headers = [...editable.matchAll(/^\[agents\]\s*$/gm)];
-  if (headers.length !== 1 || headers[0].index === undefined) throw new Error("Expected one [agents] table");
+  if (headers.length > 1) throw new Error("Expected at most one [agents] table");
+  const snippet = generated.snippet.replaceAll("\n", newline).replace(/[\r\n]+$/, "");
+  if (headers.length === 0) {
+    return editable.replace(/[\r\n]+$/, "") + newline.repeat(2) + snippet + newline;
+  }
+  if (headers[0].index === undefined) throw new Error("Invalid [agents] table");
   const sectionStart = headers[0].index + headers[0][0].length;
   const nextHeader = editable.slice(sectionStart).search(/^\[.+\]\s*$/m);
   const sectionEnd = nextHeader < 0 ? editable.length : sectionStart + nextHeader;
   const section = editable.slice(sectionStart, sectionEnd);
   if (!/^max_threads\s*=\s*6\s*$/m.test(section)) throw new Error("Expected max_threads = 6");
   if (!/^max_depth\s*=\s*[12]\s*$/m.test(section)) throw new Error("Expected max_depth = 1 or 2");
-  const snippet = generated.snippet.replaceAll("\n", newline);
   const roleStart = snippet.indexOf(`[agents.`);
   if (roleStart < 0) throw new Error("Generated config snippet has no agent roles");
   const roles = snippet.slice(roleStart).replace(/[\r\n]+$/, "");

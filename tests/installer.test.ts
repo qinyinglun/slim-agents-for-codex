@@ -73,6 +73,23 @@ describe("safe installation", () => {
     expect(installed).toContain("\r\n");
   });
 
+  it("adds an agents table to an existing Codex config that does not have one", async () => {
+    const home = await mkdtemp(join(tmpdir(), "slim-existing-no-agents-"));
+    const skillsHome = join(home, "skills");
+    await writeFile(join(home, "config.toml"), 'model = "existing"\n\n[mcp_servers.example]\ncommand = "example"\n', "utf8");
+
+    const preview = await previewInstall({ codexHome: home, skillsHome, preset: "openai-6-en" });
+    await installPreset(preview);
+
+    const installed = await readFile(join(home, "config.toml"), "utf8");
+    expect(installed).toContain('model = "existing"');
+    expect(installed).toContain("[mcp_servers.example]");
+    expect(installed).toContain("[agents]");
+    expect(installed).toContain("max_threads = 6");
+    expect(installed).toContain("max_depth = 2");
+    expect(installed).toContain("[agents.orchestrator]");
+  });
+
   it("does not mutate live agents or Skills when the config backup cannot be created", async () => {
     const home = await mkdtemp(join(tmpdir(), "slim-backup-failure-"));
     const skillsHome = join(home, "skills");
@@ -100,7 +117,7 @@ describe("safe installation", () => {
       confirm: async () => false,
     })).rejects.toThrow(/--skills-home/);
 
-    const code = await runCli(["validate", "--codex-home", home, "--skills-home", skillsHome], {
+    const code = await runCli(["validate", "--preset", "openai-5.6-en", "--codex-home", home, "--skills-home", skillsHome], {
       log: (line) => output.push(line),
       confirm: async () => false,
     });
@@ -179,6 +196,18 @@ describe("safe installation", () => {
     expect(config).toContain("[agents.backend-advisor]");
     expect(await readFile(join(home, "agents", "backend-advisor.toml"), "utf8")).toContain('name = "backend-advisor"');
     expect(await readFile(join(home, "agents", "orchestrator.toml"), "utf8")).toContain('name = "orchestrator"');
+  });
+
+  it("tells an existing installation to use the archival switch flow", async () => {
+    const home = await mkdtemp(join(tmpdir(), "slim-upgrade-guidance-"));
+    const skillsHome = join(home, "skills");
+    await writeFile(join(home, "config.toml"), "[agents]\nmax_threads = 6\nmax_depth = 1\n", "utf8");
+    await installPreset(await previewInstall({ codexHome: home, skillsHome, preset: "openai-5.6-en" }));
+
+    await expect(runCli(["install", "--preset", "openai-6-en", "--codex-home", home, "--skills-home", skillsHome, "--yes"], {
+      log: () => undefined,
+      confirm: async () => true,
+    })).rejects.toThrow(/switch-preset.*archive/i);
   });
 
   it("routes switch-preset through switch mode and post-validates", async () => {

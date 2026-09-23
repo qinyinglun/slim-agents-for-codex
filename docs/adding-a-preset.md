@@ -2,7 +2,7 @@
 
 English | [简体中文](adding-a-preset.zh-CN.md)
 
-This guide explains how to add a new Codex preset when a new upstream configuration is available. It uses `openai-5.7` as an example.
+This guide explains how to add a new Codex preset when a new upstream configuration is available. It uses `openai-6` as an example.
 
 ## Determine the type of change
 
@@ -23,6 +23,8 @@ npm ci
 ## 2. Review the upstream configuration
 
 Record the upstream commit, model-to-role mapping, reasoning effort, any prompt or role-list changes, and whether Codex supports the mapped model names. Do not infer model names from version numbers.
+
+For a model-only generation that reuses the reviewed Skill files, set `skillSourcePreset` to the immutable preset that owns those files. `convert` then copies that source into the new immutable snapshot; installation always uses the selected snapshot's own files.
 
 ## 3. Add the preset mapping
 

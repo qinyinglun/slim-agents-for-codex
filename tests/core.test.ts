@@ -22,9 +22,9 @@ async function createCodexHomeFromPreset(id: string) {
 }
 
 describe("preset generation", () => {
-  it("resolves latest to openai-5.6-en (7 roles)", () => {
-    expect(resolvePreset("latest").id).toBe("openai-5.6-en");
-    expect(resolvePreset("recommended").id).toBe("openai-5.6-en");
+  it("resolves latest to the OpenAI 6 English preset (7 roles)", () => {
+    expect(resolvePreset("latest").id).toBe("openai-6-en");
+    expect(resolvePreset("recommended").id).toBe("openai-6-en");
     expect(resolvePreset("openai-5.6-en").id).toBe("openai-5.6-en");
   });
 
@@ -72,6 +72,41 @@ describe("preset generation", () => {
     expect(zh.snippet).not.toContain("[agents.designer]");
     expect(zh.snippet).toContain("[agents.explorer]");
     expect(zh.snippet).toContain("[agents.fixer]");
+  });
+
+  it("matches the upstream OpenAI 5.6 role tiers and keeps council on the advisory tier", () => {
+    const expected = {
+      orchestrator: { model: "gpt-5.6-terra", effort: "high" },
+      oracle: { model: "gpt-5.6-sol", effort: "high" },
+      librarian: { model: "gpt-5.6-luna", effort: "low" },
+      explorer: { model: "gpt-5.6-luna", effort: "low" },
+      designer: { model: "gpt-5.6-luna", effort: "medium" },
+      fixer: { model: "gpt-5.6-luna", effort: "high" },
+      council: { model: "gpt-5.6-sol", effort: "high" },
+    };
+    expect(generatePreset("openai-5.6-en").preset.models).toEqual(expected);
+    expect(generatePreset("openai-5.6-zh").preset.models).toEqual(expected);
+    const { designer: _designer, ...withoutDesigner } = expected;
+    expect(generatePreset("openai-5.6-zh-nodesigner").preset.models).toEqual(withoutDesigner);
+  });
+
+  it("uses all three GPT-6 tiers according to role responsibility", () => {
+    const expected = {
+      orchestrator: { model: "gpt-6-sol", effort: "high" },
+      oracle: { model: "gpt-6-astra", effort: "high" },
+      librarian: { model: "gpt-6-luna", effort: "low" },
+      explorer: { model: "gpt-6-luna", effort: "low" },
+      designer: { model: "gpt-6-luna", effort: "medium" },
+      fixer: { model: "gpt-6-sol", effort: "high" },
+      council: { model: "gpt-6-astra", effort: "high" },
+    };
+    expect(generatePreset("openai-6-en").preset.models).toEqual(expected);
+    expect(generatePreset("openai-6-zh").preset.models).toEqual(expected);
+    const { designer: _designer, ...withoutDesigner } = expected;
+    expect(generatePreset("openai-6-zh-nodesigner").preset.models).toEqual(withoutDesigner);
+    expect(generatePreset("openai-6-en").roleOrder).toHaveLength(7);
+    expect(generatePreset("openai-6-zh").roleOrder).toHaveLength(7);
+    expect(generatePreset("openai-6-zh-nodesigner").roleOrder).toHaveLength(6);
   });
 
   it("encodes bounded recursive orchestration for the five Slim specialists (en)", () => {
@@ -151,9 +186,45 @@ describe("preset generation", () => {
 
   it("keeps zh-nodesigner orchestration skill without designer references", async () => {
     const orchestration = await readFile(join(process.cwd(), "presets", "openai-5.6-zh-nodesigner", "skills", "slim-orchestration", "SKILL.md"), "utf8");
-    expect(orchestration).not.toMatch(/`designer`/);
+    const metadata = await readFile(join(process.cwd(), "presets", "openai-5.6-zh-nodesigner", "skills", "slim-orchestration", "agents", "openai.yaml"), "utf8");
+    const generated = generatePreset("openai-5.6-zh-nodesigner");
+    const fixer = generated.roles.fixer.instructions;
+    expect(orchestration).not.toMatch(/designer/i);
+    expect(metadata).not.toMatch(/designer|五个/i);
+    expect(metadata).toMatch(/四个/);
+    expect(fixer).not.toMatch(/designer/i);
+    expect(Object.values(generated.agents).join("\n")).not.toMatch(/designer/i);
+    expect(fixer).toMatch(/当前预设.*不提供.*设计|设计能力.*不可用/is);
     for (const role of ["explorer", "librarian", "oracle", "fixer"]) expect(orchestration).toContain(`\`${role}\``);
     expect(orchestration).toMatch(/调度|编排|编排者/i);
+  });
+
+  it("uses Codex-portable capability wording instead of OpenCode-only tool names", () => {
+    const roles = generatePreset("openai-6-zh-nodesigner").roles;
+    expect(roles.explorer.instructions).not.toMatch(/ast_grep_search|grep\/glob\/read/i);
+    expect(roles.fixer.instructions).not.toMatch(/ast_grep_search|grep\/glob\/read/i);
+    expect(roles.explorer.instructions).toMatch(/可用.*搜索|当前环境.*搜索|rg/i);
+    expect(roles.fixer.instructions).toMatch(/可用.*读取|当前环境.*读取|rg/i);
+  });
+
+  it("keeps council manual and limits built-in advisors to read-only specialists", async () => {
+    const prompt = generatePreset("openai-6-zh-nodesigner").roles.council.instructions;
+    const metadata = await readFile(join(process.cwd(), "presets", "openai-5.6-zh-nodesigner", "skills", "slim-council", "agents", "openai.yaml"), "utf8");
+    for (const role of ["explorer", "librarian", "oracle"]) expect(prompt).toContain(`\`${role}\``);
+    expect(prompt).toMatch(/不得.*fixer|排除.*fixer/is);
+    expect(metadata).toMatch(/allow_implicit_invocation:\s*false/);
+  });
+
+  it("routes root skill entry to the matching child coordinator and avoids project ignore edits", async () => {
+    const orchestration = await readFile(join(process.cwd(), "presets", "openai-5.6-zh-nodesigner", "skills", "slim-orchestration", "SKILL.md"), "utf8");
+    const council = await readFile(join(process.cwd(), "presets", "openai-5.6-zh-nodesigner", "skills", "slim-council", "SKILL.md"), "utf8");
+    expect(orchestration).toMatch(/Root.*生成|Root.*启动|Root.*委派/is);
+    expect(orchestration).toMatch(/`orchestrator`/);
+    expect(council).toMatch(/Root.*生成|Root.*启动|Root.*委派/is);
+    expect(council).toMatch(/`council`/);
+    expect(orchestration).not.toMatch(/如果需要.*添加.*\.slim\/deepwork.*\.gitignore/is);
+    expect(orchestration).toMatch(/不得修改.*\.gitignore/is);
+    expect(orchestration).toMatch(/\.git\/info\/exclude|已被忽略|可选/is);
   });
 
   it("moves visual inspection into retained specialists (en)", () => {
@@ -296,7 +367,10 @@ describe("CLI", () => {
     expect(output.join("\n")).toContain("openai-5.6-en (supported)");
     expect(output.join("\n")).toContain("openai-5.6-zh (supported)");
     expect(output.join("\n")).toContain("openai-5.6-zh-nodesigner (supported)");
-    expect(output.join("\n")).toContain("latest -> openai-5.6-en");
+    expect(output.join("\n")).toContain("openai-6-en (supported)");
+    expect(output.join("\n")).toContain("openai-6-zh (supported)");
+    expect(output.join("\n")).toContain("openai-6-zh-nodesigner (supported)");
+    expect(output.join("\n")).toContain("latest -> openai-6-en");
   });
 
   it("validates the seven-role set against the en preset", async () => {
@@ -340,6 +414,9 @@ describe("CLI", () => {
     await copyPresetSnapshot("openai-5.6-en", outputRoot);
     await copyPresetSnapshot("openai-5.6-zh", outputRoot);
     await copyPresetSnapshot("openai-5.6-zh-nodesigner", outputRoot);
+    await copyPresetSnapshot("openai-6-en", outputRoot);
+    await copyPresetSnapshot("openai-6-zh", outputRoot);
+    await copyPresetSnapshot("openai-6-zh-nodesigner", outputRoot);
 
     await expect(runCli(["convert", "--all", "--output", outputRoot, "--check"], { log: () => undefined, confirm: async () => false })).rejects.toThrow(/aliases|snapshot|drift/i);
     await expect(readFile(join(outputRoot, "aliases.json"), "utf8")).rejects.toThrow();
@@ -418,6 +495,9 @@ max_depth = 1
 [agents.backend-advisor]
 description = "Custom project agent"
 config_file = "agents/backend-advisor.toml"
+
+[mcp_servers.custom-existing]
+url = "http://localhost:9999/mcp"
 `;
     await writeFile(join(codexHome, "config.toml"), existingConfig, "utf8");
     await writeFile(join(codexHome, "agents", "backend-advisor.toml"), 'name = "backend-advisor"\n', "utf8");
@@ -430,6 +510,8 @@ config_file = "agents/backend-advisor.toml"
     expect(updated).toContain('model = "persistent-model"');
     expect(updated).toContain("[agents.backend-advisor]");
     expect(updated).toContain("[agents.orchestrator]");
+    expect(updated).toContain("[mcp_servers.custom-existing]");
+    expect(updated).toContain('url = "http://localhost:9999/mcp"');
     expect(updated).toContain("[mcp_servers.context7]");
 
     const agents = await readdir(join(codexHome, "agents"));
