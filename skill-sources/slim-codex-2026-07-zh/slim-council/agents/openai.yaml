@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slim Council"
+  short_description: "组建专家 Council 进行决策和风险评估"
+  default_prompt: "使用 $slim-council 组建合适的专家 agent、评估可行方案并暴露风险。"

@@ -1,6 +1,6 @@
 name = "fixer"
 description = "有限实现专家，执行明确的规范，不进行研究或架构扩展。"
-model = "gpt-6-sol"
+model = "gpt-6-luna"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """

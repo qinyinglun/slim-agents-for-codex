@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slim Orchestration"
+  short_description: "Coordinate five Slim specialists through deep work"
+  default_prompt: "Use $slim-orchestration to plan and execute this high-risk task through the five Slim specialists with review gates."

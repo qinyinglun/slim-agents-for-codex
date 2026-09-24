@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "smol-toml";
-import { skillsSourceDir } from "../src/core/installer.js";
+import { skillsSourceDir, versionedSkillSourceDir } from "../src/core/installer.js";
 import { generatePreset, presets, renderAliases, resolvePreset } from "../src/core/presets.js";
 import { runCli } from "../src/cli.js";
 
@@ -15,7 +15,7 @@ async function createCodexHomeFromPreset(id: string) {
   const home = await mkdtemp(join(tmpdir(), "slim-codex-home-"));
   const generated = generatePreset(id);
   await mkdir(join(home, "agents"), { recursive: true });
-  const config = "[agents]\nmax_threads = 6\nmax_depth = 2\n\n" + generated.roleOrder.map((name) => `[agents.${name}]\ndescription = ${JSON.stringify(generated.roles[name].description)}\nconfig_file = ${JSON.stringify(`agents/${name}.toml`)}\n`).join("\n");
+  const config = "[agents]\nmax_concurrent_threads_per_session = 6\nmax_depth = 2\n\n" + generated.roleOrder.map((name) => `[agents.${name}]\ndescription = ${JSON.stringify(generated.roles[name].description)}\nconfig_file = ${JSON.stringify(`agents/${name}.toml`)}\n`).join("\n");
   await writeFile(join(home, "config.toml"), config, "utf8");
   for (const name of generated.roleOrder) await writeFile(join(home, "agents", `${name}.toml`), generated.agents[name], "utf8");
   return { home, generated };
@@ -90,14 +90,14 @@ describe("preset generation", () => {
     expect(generatePreset("openai-5.6-zh-nodesigner").preset.models).toEqual(withoutDesigner);
   });
 
-  it("uses all three GPT-6 tiers according to role responsibility", () => {
+  it("matches the upstream GPT-6 specialist mapping plus the Codex Council adaptation", () => {
     const expected = {
       orchestrator: { model: "gpt-6-sol", effort: "high" },
       oracle: { model: "gpt-6-astra", effort: "high" },
       librarian: { model: "gpt-6-luna", effort: "low" },
       explorer: { model: "gpt-6-luna", effort: "low" },
       designer: { model: "gpt-6-luna", effort: "medium" },
-      fixer: { model: "gpt-6-sol", effort: "high" },
+      fixer: { model: "gpt-6-luna", effort: "high" },
       council: { model: "gpt-6-astra", effort: "high" },
     };
     expect(generatePreset("openai-6-en").preset.models).toEqual(expected);
@@ -107,6 +107,26 @@ describe("preset generation", () => {
     expect(generatePreset("openai-6-en").roleOrder).toHaveLength(7);
     expect(generatePreset("openai-6-zh").roleOrder).toHaveLength(7);
     expect(generatePreset("openai-6-zh-nodesigner").roleOrder).toHaveLength(6);
+  });
+
+  it("keeps every packaged Skill snapshot tied to an independent versioned source", async () => {
+    for (const preset of Object.values(presets)) {
+      for (const name of preset.skillNames ?? []) {
+        const source = versionedSkillSourceDir(preset.id, name);
+        const snapshot = skillsSourceDir(preset.id, name);
+        expect(source).not.toBe(snapshot);
+        expect(await readFile(join(source, "SKILL.md"), "utf8")).toBe(await readFile(join(snapshot, "SKILL.md"), "utf8"));
+        expect(await readFile(join(source, "agents", "openai.yaml"), "utf8")).toBe(await readFile(join(snapshot, "agents", "openai.yaml"), "utf8"));
+      }
+    }
+  });
+
+  it("uses the current Codex concurrency setting in generated snippets", () => {
+    for (const id of Object.keys(presets)) {
+      const snippet = generatePreset(id).snippet;
+      expect(snippet).toContain("max_concurrent_threads_per_session = 6");
+      expect(snippet).not.toMatch(/^max_threads\s*=/m);
+    }
   });
 
   it("encodes bounded recursive orchestration for the five Slim specialists (en)", () => {
@@ -234,7 +254,7 @@ describe("preset generation", () => {
     expect(generated.roles.oracle.instructions).toMatch(/diagrams|screenshots/i);
   });
 
-  it("generates the exact behavioral MCP denylist for every role (en)", () => {
+  it("preserves the exact behavioral MCP denylist for every role in every preset", () => {
     const expected: Record<string, string[]> = {
       orchestrator: ["codegraph", "context7", "exa", "grep"],
       oracle: ["context7", "grep"],
@@ -244,51 +264,14 @@ describe("preset generation", () => {
       fixer: ["context7", "grep"],
       council: [],
     };
-    const generated = generatePreset("openai-5.6-en");
-    for (const [name, toml] of Object.entries(generated.agents)) {
-      const document = parse(toml) as { developer_instructions: string; mcp_servers?: Record<string, unknown> };
-      expect(Object.keys(document.mcp_servers ?? {})).toEqual([]);
-      if (expected[name].length > 0) expect(document.developer_instructions).toContain(`MCP denylist: ${expected[name].join(", ")}.`);
-      else expect(document.developer_instructions).not.toContain("MCP denylist:");
-    }
-    expect(generated.snippet).not.toContain("[mcp_servers.\"");
-  });
-
-  it("generates the exact behavioral MCP denylist for zh preset (with designer)", () => {
-    const expected: Record<string, string[]> = {
-      orchestrator: ["codegraph", "context7", "exa", "grep"],
-      oracle: ["context7", "grep"],
-      librarian: ["codegraph"],
-      explorer: ["context7", "exa", "grep"],
-      designer: ["context7", "exa", "grep"],
-      fixer: ["context7", "grep"],
-      council: [],
-    };
-    const generated = generatePreset("openai-5.6-zh");
-    for (const [name, toml] of Object.entries(generated.agents)) {
-      const document = parse(toml) as { developer_instructions: string; mcp_servers?: Record<string, unknown> };
-      expect(Object.keys(document.mcp_servers ?? {})).toEqual([]);
-      if (expected[name].length > 0) expect(document.developer_instructions).toContain(`MCP denylist: ${expected[name].join(", ")}.`);
-      else expect(document.developer_instructions).not.toContain("MCP denylist:");
-    }
-  });
-
-  it("generates the exact behavioral MCP denylist for zh-nodesigner preset", () => {
-    const expected: Record<string, string[]> = {
-      orchestrator: ["codegraph", "context7", "exa", "grep"],
-      oracle: ["context7", "grep"],
-      librarian: ["codegraph"],
-      explorer: ["context7", "exa", "grep"],
-      fixer: ["context7", "grep"],
-      council: [],
-    };
-    const generated = generatePreset("openai-5.6-zh-nodesigner");
-    expect(Object.keys(generated.agents)).toEqual(["orchestrator", "oracle", "librarian", "explorer", "fixer", "council"]);
-    for (const [name, toml] of Object.entries(generated.agents)) {
-      const document = parse(toml) as { developer_instructions: string; mcp_servers?: Record<string, unknown> };
-      expect(Object.keys(document.mcp_servers ?? {})).toEqual([]);
-      if (expected[name].length > 0) expect(document.developer_instructions).toContain(`MCP denylist: ${expected[name].join(", ")}.`);
-      else expect(document.developer_instructions).not.toContain("MCP denylist:");
+    for (const id of Object.keys(presets)) {
+      const generated = generatePreset(id);
+      for (const [name, toml] of Object.entries(generated.agents)) {
+        const document = parse(toml) as { developer_instructions: string; mcp_servers?: Record<string, unknown> };
+        expect(Object.keys(document.mcp_servers ?? {}), id).toEqual([]);
+        if (expected[name].length > 0) expect(document.developer_instructions, `${id}/${name}`).toContain(`MCP denylist: ${expected[name].join(", ")}.`);
+        else expect(document.developer_instructions, `${id}/${name}`).not.toContain("MCP denylist:");
+      }
     }
   });
 
@@ -300,23 +283,13 @@ describe("preset generation", () => {
     }
   });
 
-  it("includes MCP server definitions in config snippet (en)", () => {
-    const generated = generatePreset("openai-5.6-en");
-    expect(generated.snippet).toContain("[mcp_servers.context7]");
-    expect(generated.snippet).toContain('command = "npx"');
-    expect(generated.snippet).toContain('"@context7/context7-server"');
-  });
-
-  it("includes MCP server definitions in config snippet (zh)", () => {
-    const generated = generatePreset("openai-5.6-zh");
-    expect(generated.snippet).toContain("[mcp_servers.context7]");
-    expect(generated.snippet).toContain('command = "npx"');
-  });
-
-  it("includes MCP server definitions in config snippet (zh-nodesigner)", () => {
-    const generated = generatePreset("openai-5.6-zh-nodesigner");
-    expect(generated.snippet).toContain("[mcp_servers.context7]");
-    expect(generated.snippet).toContain('command = "npx"');
+  it("includes the shared MCP server definition in every config snippet", () => {
+    for (const id of Object.keys(presets)) {
+      const snippet = generatePreset(id).snippet;
+      expect(snippet, id).toContain("[mcp_servers.context7]");
+      expect(snippet, id).toContain('command = "npx"');
+      expect(snippet, id).toContain('"@context7/context7-server"');
+    }
   });
 
   it("does not emit skills sections in config snippet (en)", () => {
@@ -324,34 +297,16 @@ describe("preset generation", () => {
     expect(generated.snippet).not.toContain("[skills.");
   });
 
-  it("keeps committed snapshots byte-equal to generated preset (en)", async () => {
-    const generated = generatePreset("openai-5.6-en");
-    const root = join(process.cwd(), "presets", "openai-5.6-en");
-    const files = (await readdir(join(root, "agents"))).sort();
-    expect(files).toEqual(generated.roleOrder.map((name) => `${name}.toml`).sort());
-    expect(await readFile(join(root, "config.snippet.toml"), "utf8")).toBe(generated.snippet);
-    expect(await readFile(join(root, "manifest.json"), "utf8")).toBe(generated.manifest);
-    for (const name of generated.roleOrder) expect(await readFile(join(root, "agents", `${name}.toml`), "utf8")).toBe(generated.agents[name]);
-  });
-
-  it("keeps committed snapshots byte-equal to generated preset (zh, with designer)", async () => {
-    const generated = generatePreset("openai-5.6-zh");
-    const root = join(process.cwd(), "presets", "openai-5.6-zh");
-    const files = (await readdir(join(root, "agents"))).sort();
-    expect(files).toEqual(generated.roleOrder.map((name) => `${name}.toml`).sort());
-    expect(await readFile(join(root, "config.snippet.toml"), "utf8")).toBe(generated.snippet);
-    expect(await readFile(join(root, "manifest.json"), "utf8")).toBe(generated.manifest);
-    for (const name of generated.roleOrder) expect(await readFile(join(root, "agents", `${name}.toml`), "utf8")).toBe(generated.agents[name]);
-  });
-
-  it("keeps committed snapshots byte-equal to generated preset (zh-nodesigner)", async () => {
-    const generated = generatePreset("openai-5.6-zh-nodesigner");
-    const root = join(process.cwd(), "presets", "openai-5.6-zh-nodesigner");
-    const files = (await readdir(join(root, "agents"))).sort();
-    expect(files).toEqual(generated.roleOrder.map((name) => `${name}.toml`).sort());
-    expect(await readFile(join(root, "config.snippet.toml"), "utf8")).toBe(generated.snippet);
-    expect(await readFile(join(root, "manifest.json"), "utf8")).toBe(generated.manifest);
-    for (const name of generated.roleOrder) expect(await readFile(join(root, "agents", `${name}.toml`), "utf8")).toBe(generated.agents[name]);
+  it("keeps every committed snapshot byte-equal to its generated preset", async () => {
+    for (const id of Object.keys(presets)) {
+      const generated = generatePreset(id);
+      const root = join(process.cwd(), "presets", id);
+      const files = (await readdir(join(root, "agents"))).sort();
+      expect(files, id).toEqual(generated.roleOrder.map((name) => `${name}.toml`).sort());
+      expect(await readFile(join(root, "config.snippet.toml"), "utf8"), id).toBe(generated.snippet);
+      expect(await readFile(join(root, "manifest.json"), "utf8"), id).toBe(generated.manifest);
+      for (const name of generated.roleOrder) expect(await readFile(join(root, "agents", `${name}.toml`), "utf8"), `${id}/${name}`).toBe(generated.agents[name]);
+    }
   });
 
   it("keeps the committed aliases synchronized with the generator", async () => {
@@ -430,6 +385,18 @@ describe("CLI", () => {
 
     await expect(runCli(["convert", "--preset", "openai-5.6-en", "--output", outputRoot, "--check"], { log: () => undefined, confirm: async () => false })).rejects.toThrow(/agent files|observer|snapshot/i);
     expect(await readFile(staleObserver, "utf8")).toBe('name = "observer"\n');
+  });
+
+  it("convert --check rejects Skill drift against the versioned source", async () => {
+    const outputRoot = await mkdtemp(join(tmpdir(), "slim-convert-skill-drift-"));
+    await copyPresetSnapshot("openai-6-zh-nodesigner", outputRoot);
+    const skillPath = join(outputRoot, "openai-6-zh-nodesigner", "skills", "slim-council", "SKILL.md");
+    await writeFile(skillPath, "drifted\n", "utf8");
+
+    await expect(runCli(["convert", "--preset", "openai-6-zh-nodesigner", "--output", outputRoot, "--check"], {
+      log: () => undefined,
+      confirm: async () => false,
+    })).rejects.toThrow(/Skill content drift/);
   });
 
   it("convert generation removes stale managed roles but preserves unrelated TOMLs", async () => {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slim Orchestration"
+  short_description: "通过四个 Slim 专家协同完成深度工作"
+  default_prompt: "使用 $slim-orchestration 通过四个 Slim 专家规划和执行此高风险任务，包含按风险设置的审查门控。"

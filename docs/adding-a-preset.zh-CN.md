@@ -26,32 +26,30 @@ npm ci
 
 ## 3. 新增 preset 映射
 
-编辑 `src/core/presets.ts`，加入映射：
+编辑 `src/core/presets.ts`：先将上游的模型及 effort 精确记录为新的 `modelProfiles` 条目，再声明带固定 ID、角色源版本和创建日期的预设：
 
 ```ts
-"openai-5.7": {
-  id: "openai-5.7",
-  adapter: "oh-my-opencode-slim",
-  adapterSchemaVersion: 2,
-  source: "alvinunreal/oh-my-opencode-slim",
-  sourceVersion: "slim-codex-2026-07",
-  created: "YYYY-MM-DD",
-  status: "supported",
-  snapshotFormatVersion: 1,
-  models: mapping({
-    orchestrator: ["实际模型名称", "medium"],
-    oracle: ["实际模型名称", "high"],
-    librarian: ["实际模型名称", "low"],
-    explorer: ["实际模型名称", "low"],
-    designer: ["实际模型名称", "medium"],
-    fixer: ["实际模型名称", "medium"],
-    council: ["实际模型名称", "high"],
-  }),
-  skillNames: managedSkillNames,
-},
+// modelProfiles 中：
+"openai-5.7": mapping({
+  orchestrator: ["上游实际模型", "实际强度"],
+  oracle: ["上游实际模型", "实际强度"],
+  librarian: ["上游实际模型", "实际强度"],
+  explorer: ["上游实际模型", "实际强度"],
+  designer: ["上游实际模型", "实际强度"],
+  fixer: ["上游实际模型", "实际强度"],
+  council: ["经审查的 Codex 适配模型", "实际强度"],
+}),
+
+// presets 中：
+"openai-5.7-en": definePreset("openai-5.7-en", "slim-codex-2026-07", "YYYY-MM-DD", modelProfiles["openai-5.7"]),
+"openai-5.7-zh": definePreset("openai-5.7-zh", "slim-codex-2026-07-zh", "YYYY-MM-DD", modelProfiles["openai-5.7"]),
+"openai-5.7-zh-nodesigner": definePreset(
+  "openai-5.7-zh-nodesigner", "slim-codex-2026-07-zh-no-designer", "YYYY-MM-DD",
+  withoutDesigner(modelProfiles["openai-5.7"]),
+),
 ```
 
-如果 preset 需要不同的 Skill 内容，在 preset 输出目录下创建 `skills/<name>/` 目录，包含 `SKILL.md` 和 `agents/openai.yaml`。`skillNames` 字段声明该 preset 包含哪些 Skill 目录。
+仅更换模型时，复用已审查的角色来源及其 `skill-sources/<sourceVersion>/`。若角色契约或 Skill 内容需要改变，先创建新的角色源版本及对应的版本化 Skill 目录，包含各受管 Skill 的 `SKILL.md` 和 `agents/openai.yaml`。不要直接编辑 `presets/<id>/agents/` 下的生成文件。
 
 如果此 preset 应成为默认版本，在同一文件中更新别名。
 
@@ -65,7 +63,7 @@ node dist/cli.js convert --all --output presets
 结果应包含：
 
 ```text
-presets/openai-5.7/
+presets/openai-5.7-en/
 ├── agents/
 │   ├── orchestrator.toml
 │   ├── oracle.toml
@@ -88,7 +86,7 @@ presets/openai-5.7/
 ## 5. 验证
 
 ```bash
-node dist/cli.js validate --path presets/openai-5.7/agents --preset openai-5.7
+node dist/cli.js validate --path presets/openai-5.7-en/agents --preset openai-5.7-en
 node dist/cli.js convert --all --output presets --check
 npm test
 npm run typecheck
@@ -113,11 +111,17 @@ npm pack --dry-run
 在新增 preset 之前先版本化角色来源，例如：
 
 ```text
-src/adapters/oh-my-opencode-slim/
-├── reviewed-2026-07/
-│   └── roles.ts
-└── reviewed-YYYY-MM/
-    └── roles.ts
+src/core/role-sources/
+├── slim-codex-2026-07/
+│   └── index.ts
+└── slim-codex-YYYY-MM/
+    └── index.ts
+
+skill-sources/
+├── slim-codex-2026-07/
+│   └── slim-orchestration/SKILL.md
+└── slim-codex-YYYY-MM/
+    └── slim-orchestration/SKILL.md
 ```
 
 每个 preset manifest 应指向具体的角色来源版本。为历史 preset 添加回归测试。

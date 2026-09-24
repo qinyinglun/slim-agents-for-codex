@@ -26,7 +26,9 @@ Council prefers `$grilling`, `$grill-with-docs`, `$deep-research`, `$brainstormi
 
 Orchestrator is the execution team. It receives one root-approved bounded outcome and any Council handoff, builds an execution graph, and delegates only to the five versioned Slim specialists. It does not call Council, arbitrary custom agents, or another Orchestrator.
 
-`agents.max_depth = 2` permits both coordinators to create direct child experts while preventing those experts from delegating again. `agents.max_threads = 6` bounds concurrent open threads; coordinators schedule larger rosters in batches when necessary.
+`agents.max_depth = 2` expresses the intended delegation depth; specialist instructions also prohibit further delegation. `agents.max_concurrent_threads_per_session = 6` bounds concurrently open child threads; coordinators schedule larger rosters in batches when necessary.
+
+The current public Codex configuration reference does not list `agents.max_depth`; confirm runtime support in the target client before treating this field as a hard depth cap.
 
 Every coordinator-to-specialist spawn uses `fork_turns="none"` with a self-contained assignment. Codex full-history forks inherit the current agent type, model, and reasoning effort, so they cannot also select a different registered role.
 
@@ -44,7 +46,7 @@ Generated and installed agent TOMLs remain flat under `agents/`. Additional Coun
 
 ## Skill boundary
 
-Each preset ships its own Skill files under `presets/<id>/skills/`:
+Versioned Skill authoring sources live under `skill-sources/<sourceVersion>/`. The generator copies them into each self-contained `presets/<id>/skills/` snapshot:
 
 - `slim-orchestration/SKILL.md` defines how Orchestrator plans persistent deep work and schedules only the five built-in Slim specialists through implementation and verification.
 - `slim-council/SKILL.md` defines how Council selects installed expert agents by description, obtains independent advisory perspectives, handles partial failures, and returns a feasibility-and-risk recommendation for Root approval.

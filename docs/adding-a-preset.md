@@ -2,7 +2,7 @@
 
 English | [简体中文](adding-a-preset.zh-CN.md)
 
-This guide explains how to add a new Codex preset when a new upstream configuration is available. It uses `openai-6` as an example.
+This guide explains how to add a new Codex preset when a new upstream configuration is available. It uses `openai-5.7` as an example.
 
 ## Determine the type of change
 
@@ -24,60 +24,34 @@ npm ci
 
 Record the upstream commit, model-to-role mapping, reasoning effort, any prompt or role-list changes, and whether Codex supports the mapped model names. Do not infer model names from version numbers.
 
-For a model-only generation that reuses the reviewed Skill files, set `skillSourcePreset` to the immutable preset that owns those files. `convert` then copies that source into the new immutable snapshot; installation always uses the selected snapshot's own files.
+For a model-only generation, keep the reviewed role source. Its matching versioned Skill source under `skill-sources/<sourceVersion>/` supplies the new snapshot. Installation always uses the selected preset's own packaged Skill files.
 
 ## 3. Add the preset mapping
 
-Edit `src/core/presets.ts` and add a mapping:
+Edit `src/core/presets.ts`: record the exact upstream model and effort choices in a new, explicit `modelProfiles` entry, then declare each new preset with its immutable ID, role source, and creation date:
 
 ```ts
-"openai-5.7": {
-  id: "openai-5.7",
-  adapter: "oh-my-opencode-slim",
-  adapterSchemaVersion: 2,
-  source: "alvinunreal/oh-my-opencode-slim",
-  sourceVersion: "slim-codex-2026-07",
-  created: "YYYY-MM-DD",
-  status: "supported",
-  snapshotFormatVersion: 1,
-  models: mapping({
-    orchestrator: ["actual-model-name", "medium"],
-    oracle: ["actual-model-name", "high"],
-    librarian: ["actual-model-name", "low"],
-    explorer: ["actual-model-name", "low"],
-    designer: ["actual-model-name", "medium"],
-    fixer: ["actual-model-name", "medium"],
-    council: ["actual-model-name", "high"],
-  }),
-  skillNames: managedSkillNames,
-},
+// In modelProfiles:
+"openai-5.7": mapping({
+  orchestrator: ["actual-upstream-model", "actual-effort"],
+  oracle: ["actual-upstream-model", "actual-effort"],
+  librarian: ["actual-upstream-model", "actual-effort"],
+  explorer: ["actual-upstream-model", "actual-effort"],
+  designer: ["actual-upstream-model", "actual-effort"],
+  fixer: ["actual-upstream-model", "actual-effort"],
+  council: ["reviewed-Codex-adaptation-model", "actual-effort"],
+}),
+
+// In presets:
+"openai-5.7-en": definePreset("openai-5.7-en", "slim-codex-2026-07", "YYYY-MM-DD", modelProfiles["openai-5.7"]),
+"openai-5.7-zh": definePreset("openai-5.7-zh", "slim-codex-2026-07-zh", "YYYY-MM-DD", modelProfiles["openai-5.7"]),
+"openai-5.7-zh-nodesigner": definePreset(
+  "openai-5.7-zh-nodesigner", "slim-codex-2026-07-zh-no-designer", "YYYY-MM-DD",
+  withoutDesigner(modelProfiles["openai-5.7"]),
+),
 ```
 
-If a preset should omit a role (e.g. no designer for server-side), use a role source that excludes that role and omit it from `models`:
-
-```ts
-"openai-5.7-server": {
-  id: "openai-5.7-server",
-  adapter: "oh-my-opencode-slim",
-  adapterSchemaVersion: 2,
-  source: "alvinunreal/oh-my-opencode-slim",
-  sourceVersion: "slim-codex-2026-07-server",
-  created: "YYYY-MM-DD",
-  status: "supported",
-  snapshotFormatVersion: 1,
-  models: mapping({
-    orchestrator: ["actual-model-name", "medium"],
-    oracle: ["actual-model-name", "high"],
-    librarian: ["actual-model-name", "low"],
-    explorer: ["actual-model-name", "low"],
-    fixer: ["actual-model-name", "medium"],
-    council: ["actual-model-name", "high"],
-  }),
-  skillNames: managedSkillNames,
-},
-```
-
-If the preset needs different Skill content (e.g. removing designer references from the orchestration skill for a server-only preset), create a `skills/<name>/` directory under the preset output directory with an adapted `SKILL.md` and `agents/openai.yaml`. The `skillNames` field declares which Skill directories the preset ships.
+For a new role contract, first version the role source and create its matching `skill-sources/<sourceVersion>/` directory with `SKILL.md` and `agents/openai.yaml` for each managed Skill. Never edit generated files under `presets/<id>/agents/` directly.
 
 Update the aliases in the same file if this preset should become the default.
 
@@ -91,7 +65,7 @@ node dist/cli.js convert --all --output presets
 The result should contain:
 
 ```text
-presets/openai-5.7/
+presets/openai-5.7-en/
 ├── agents/
 │   ├── orchestrator.toml
 │   ├── oracle.toml
@@ -114,7 +88,7 @@ presets/openai-5.7/
 ## 5. Verify the preset
 
 ```bash
-node dist/cli.js validate --path presets/openai-5.7/agents --preset openai-5.7
+node dist/cli.js validate --path presets/openai-5.7-en/agents --preset openai-5.7-en
 node dist/cli.js convert --all --output presets --check
 npm test
 npm run typecheck
@@ -139,11 +113,17 @@ Update `package.json` and `package-lock.json` according to the scope of the chan
 Version the role sources before adding a new preset, for example:
 
 ```text
-src/adapters/oh-my-opencode-slim/
-├── reviewed-2026-07/
-│   └── roles.ts
-└── reviewed-YYYY-MM/
-    └── roles.ts
+src/core/role-sources/
+├── slim-codex-2026-07/
+│   └── index.ts
+└── slim-codex-YYYY-MM/
+    └── index.ts
+
+skill-sources/
+├── slim-codex-2026-07/
+│   └── slim-orchestration/SKILL.md
+└── slim-codex-YYYY-MM/
+    └── slim-orchestration/SKILL.md
 ```
 
 Each preset manifest should reference a specific role-source version. Add regression coverage for historical presets.

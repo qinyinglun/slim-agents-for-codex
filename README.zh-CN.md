@@ -44,7 +44,7 @@ node dist/cli.js install --preset latest --scope global --yes
 
 可用 presets：
 
-- `openai-6-en` — 英文提示词和 Skills（默认、推荐），7 个角色含 designer；Oracle/Council 使用 Astra，Orchestrator/Fixer 使用 Sol，专门专家通道使用 Luna
+- `openai-6-en` — 英文提示词和 Skills（默认、推荐），7 个角色含 designer；Oracle/Council 使用 Astra，Orchestrator 使用 Sol，专家通道使用 Luna
 - `openai-6-zh` — 中文（简体）提示词和 Skills，7 个角色，采用相同的分层模型映射
 - `openai-6-zh-nodesigner` — 中文（简体）提示词和 Skills，6 个角色不含 designer（服务端场景），采用相同的分层模型映射
 - `openai-5.6-en` — 英文提示词和 Skills，7 个角色含 designer
@@ -55,7 +55,7 @@ node dist/cli.js install --preset latest --scope global --yes
 
 GPT-6 模型是否可用取决于所使用的 Codex 账号或 API 凭据；安装器验证包完整性和配置，不验证模型权限。
 
-GPT-5.6 presets 与上游 OpenAI 映射保持一致：Orchestrator 使用 `gpt-5.6-terra/high`；Oracle 和 Codex 新增的 Council 适配使用 `gpt-5.6-sol/high`；Librarian、Explorer 使用 `gpt-5.6-luna/low`；Designer 使用 Luna/medium；Fixer 使用 Luna/high。GPT-6 presets 使用全部三个 GPT-6 层级：Oracle 和 Council 用 `gpt-6-astra/high` 做独立的高风险分析，Orchestrator 和 Fixer 用 `gpt-6-sol/high` 做协调与实施，Librarian/Explorer 用 `gpt-6-luna/low`，Designer 用 Luna/medium。
+GPT-5.6 presets 与上游 OpenAI 映射保持一致：Orchestrator 使用 `gpt-5.6-terra/high`；Oracle 和 Codex 新增的 Council 适配使用 `gpt-5.6-sol/high`；Librarian、Explorer 使用 `gpt-5.6-luna/low`；Designer 使用 Luna/medium；Fixer 使用 Luna/high。GPT-6 遵循[上游 OpenAI preset](https://github.com/alvinunreal/oh-my-opencode-slim/blob/aab1e48e5fc4b44b2dbc4187142f565b1aa01f62/docs/openai-preset.md)：Orchestrator 使用 `gpt-6-sol/high`，Oracle 和本项目新增的 Council 使用 `gpt-6-astra/high`，Librarian/Explorer 使用 `gpt-6-luna/low`，Designer 使用 Luna/medium，Fixer 使用 Luna/high。
 
 ## 手动安装
 
@@ -82,7 +82,11 @@ Council 和 Orchestrator 不会互相调用。在 `agents.max_depth = 2` 时，�
 
 Council 专用的只读自定义 agent TOML、模型继承策略和父权限限制请参见 [Council 专家代理](docs/council-expert-agents.md)。
 
-每个 preset 捆绑其自己的 Skill 文件，位于 `presets/<id>/skills/` 下。`install` 或 `switch-preset` 将活动 preset 的 Skills 部署到选定的 Skill scope。安装后请开启新的 Codex 任务。
+快速分析逻辑时，可直接说：“仅调用 `oracle` 子代理只读分析 `<模块或现象>`，给出调用链、状态变化、边界条件、结论和文件行号。”若调用路径尚不明确，先让 `explorer` 定位。
+
+带版本的 Skill 维护源位于 `skill-sources/<sourceVersion>/`；每个 preset 仍在 `presets/<id>/skills/` 下自带完整副本。`install` 或 `switch-preset` 将活动 preset 的 Skills 部署到选定的 Skill scope。安装后请开启新的 Codex 任务。
+
+角色 MCP denylist 是按 server ID 编写的可移植行为指引。某个 ID 若未安装在本机，就不会产生实际作用；安装器不会根据个人 MCP 连接自动添加禁用项。这不是强制的 MCP 隔离。
 
 需要新增新一代时，请参考[新增模型预设维护指南](docs/adding-a-preset.md)。
 

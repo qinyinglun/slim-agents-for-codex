@@ -5,7 +5,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { parse } from "smol-toml";
-import { filesBelow, installPreset, previewInstall, skillsSourceDir, validateInstalledSkills } from "./core/installer.js";
+import { filesBelow, installPreset, previewInstall, skillsSourceDir, validateInstalledSkills, versionedSkillSourceDir } from "./core/installer.js";
 import { aliases, generatePreset, managedRoleNames, presets, renderAliases } from "./core/presets.js";
 
 export interface CliIo { log(line: string): void; confirm(question: string): Promise<boolean> }
@@ -30,22 +30,11 @@ async function writeGenerated(id: string, output: string) {
   await writeFile(join(root, "config.snippet.toml"), generated.snippet, "utf8");
   await writeFile(join(root, "manifest.json"), generated.manifest, "utf8");
   for (const name of generated.skillNames) {
-    const src = skillsSourceDir(generated.preset.skillSourcePreset ?? generated.preset.id, name);
+    const src = versionedSkillSourceDir(generated.preset.id, name);
     const dst = join(root, "skills", name);
-    if (src !== dst) await cp(src, dst, { recursive: true });
+    await cp(src, dst, { recursive: true });
   }
   return root;
-}
-
-function generatedArtifacts(id: string, output: string) {
-  const generated = generatePreset(id);
-  const root = join(output, generated.preset.id);
-  const artifacts = [
-    ...generated.roleOrder.map((name) => ({ path: join(root, "agents", `${name}.toml`), content: generated.agents[name] })),
-    { path: join(root, "config.snippet.toml"), content: generated.snippet },
-    { path: join(root, "manifest.json"), content: generated.manifest },
-  ];
-  return { root, artifacts };
 }
 
 function stable(value: unknown): unknown {
@@ -87,7 +76,7 @@ async function assertGeneratedArtifactsMatch(id: string, output: string) {
   if ((await readFile(snippetPath, "utf8")) !== generated.snippet) throw new Error(`Generated artifact drift: ${snippetPath}`);
   if ((await readFile(manifestPath, "utf8")) !== generated.manifest) throw new Error(`Generated artifact drift: ${manifestPath}`);
   for (const skillName of generated.skillNames) {
-    const src = skillsSourceDir(generated.preset.id, skillName);
+    const src = versionedSkillSourceDir(generated.preset.id, skillName);
     const dst = join(root, "skills", skillName);
     const srcFiles = await filesBelow(src);
     const dstFiles = await filesBelow(dst);

@@ -66,6 +66,8 @@ describe("safe installation", () => {
     const installed = await readFile(join(home, "config.toml"), "utf8");
     expect(installed).toContain('model = "existing"');
     expect(installed).toContain("max_depth = 2");
+    expect(installed).toContain("max_concurrent_threads_per_session = 6");
+    expect(installed).not.toMatch(/^max_threads\s*=/m);
     expect(installed.match(/^\[agents\]$/gm)).toHaveLength(1);
     expect(installed).toContain("[agents.explorer]");
     expect(installed).toContain('config_file = "agents/explorer.toml"');
@@ -85,9 +87,20 @@ describe("safe installation", () => {
     expect(installed).toContain('model = "existing"');
     expect(installed).toContain("[mcp_servers.example]");
     expect(installed).toContain("[agents]");
-    expect(installed).toContain("max_threads = 6");
+    expect(installed).toContain("max_concurrent_threads_per_session = 6");
     expect(installed).toContain("max_depth = 2");
     expect(installed).toContain("[agents.orchestrator]");
+  });
+
+  it("accepts an existing config with the current concurrency key", async () => {
+    const home = await mkdtemp(join(tmpdir(), "slim-modern-concurrency-"));
+    await writeFile(join(home, "config.toml"), "[agents]\nmax_concurrent_threads_per_session = 6\nmax_depth = 1\n", "utf8");
+
+    await installPreset(await previewInstall({ codexHome: home, preset: "openai-6-zh-nodesigner" }));
+
+    const installed = await readFile(join(home, "config.toml"), "utf8");
+    expect(installed.match(/^max_concurrent_threads_per_session = 6$/gm)).toHaveLength(1);
+    expect(installed).not.toMatch(/^max_threads\s*=/m);
   });
 
   it("does not mutate live agents or Skills when the config backup cannot be created", async () => {

@@ -15,7 +15,7 @@
     "url": "https://github.com/qinyinglun/slim-agents-for-codex/issues"
   },
   "bin": { "slim-agents-codex": "dist/cli.js" },
-  "files": ["dist", "presets", "docs/adding-a-preset.md", "docs/adding-a-preset.zh-CN.md", "docs/preset-lifecycle.md", "docs/slim-codex-architecture.md", "docs/council-expert-agents.md", "README.md", "README.zh-CN.md", "LICENSE", "NOTICE.md"],
+  "files": ["dist", "presets", "skill-sources", "docs/adding-a-preset.md", "docs/adding-a-preset.zh-CN.md", "docs/preset-lifecycle.md", "docs/slim-codex-architecture.md", "docs/council-expert-agents.md", "README.md", "README.zh-CN.md", "LICENSE", "NOTICE.md"],
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "tsc -p tsconfig.json",

@@ -1,6 +1,6 @@
 name = "fixer"
 description = "Bounded implementation specialist that executes clear specifications without research or architectural expansion."
-model = "gpt-6-sol"
+model = "gpt-6-luna"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """

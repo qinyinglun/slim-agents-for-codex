@@ -1,7 +1,7 @@
 import { copyFile, cp, mkdir, readFile, readdir, realpath, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { generatePreset, managedRoleNames, managedSkillNames } from "./presets.js";
+import { generatePreset, managedRoleNames, managedSkillNames, resolvePreset } from "./presets.js";
 
 function packageRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -9,6 +9,10 @@ function packageRoot(): string {
 
 export function skillsSourceDir(presetId: string, skillName: string): string {
   return join(packageRoot(), "presets", presetId, "skills", skillName);
+}
+
+export function versionedSkillSourceDir(presetId: string, skillName: string): string {
+  return join(packageRoot(), "skill-sources", resolvePreset(presetId).sourceVersion, skillName);
 }
 
 export interface InstallRequest { codexHome: string; preset: string; mode?: "install" | "switch"; skillsHome?: string }
@@ -70,12 +74,18 @@ function updateConfig(text: string, newline: string, generated: ReturnType<typeo
   const nextHeader = editable.slice(sectionStart).search(/^\[.+\]\s*$/m);
   const sectionEnd = nextHeader < 0 ? editable.length : sectionStart + nextHeader;
   const section = editable.slice(sectionStart, sectionEnd);
-  if (!/^max_threads\s*=\s*6\s*$/m.test(section)) throw new Error("Expected max_threads = 6");
+  const concurrency = section.match(/^\s*(?:max_threads|max_concurrent_threads_per_session)\s*=.*$/gm) ?? [];
+  if (concurrency.length !== 1 || !/^\s*(?:max_threads|max_concurrent_threads_per_session)\s*=\s*6\s*$/.test(concurrency[0])) {
+    throw new Error("Expected one subagent concurrency limit of 6");
+  }
   if (!/^max_depth\s*=\s*[12]\s*$/m.test(section)) throw new Error("Expected max_depth = 1 or 2");
   const roleStart = snippet.indexOf(`[agents.`);
   if (roleStart < 0) throw new Error("Generated config snippet has no agent roles");
   const roles = snippet.slice(roleStart).replace(/[\r\n]+$/, "");
-  const updated = editable.replace(/^max_depth\s*=\s*[12]\s*$/m, "max_depth = 2").replace(/[\r\n]+$/, "");
+  const updated = editable
+    .replace(/^max_threads\s*=\s*6\s*$/m, "max_concurrent_threads_per_session = 6")
+    .replace(/^max_depth\s*=\s*[12]\s*$/m, "max_depth = 2")
+    .replace(/[\r\n]+$/, "");
   return updated + newline.repeat(2) + roles + newline;
 }
 
@@ -161,7 +171,7 @@ export async function previewInstall(request: InstallRequest): Promise<InstallPr
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     configExisted = false;
-    original = Buffer.from("[agents]\nmax_threads = 6\nmax_depth = 1\n", "utf8");
+    original = Buffer.from("[agents]\nmax_concurrent_threads_per_session = 6\nmax_depth = 1\n", "utf8");
   }
   const bom = original.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf]));
   const body = original.subarray(bom ? 3 : 0).toString("utf8");

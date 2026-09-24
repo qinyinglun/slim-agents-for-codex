@@ -44,7 +44,7 @@ If files appear in an unexpected location, inspect `echo "$CODEX_HOME"` and use 
 
 Available presets:
 
-- `openai-6-en` — English prompts and Skills (default, recommended), 7 roles with designer; Astra for Oracle/Council, Sol for Orchestrator/Fixer, Luna for focused specialist lanes
+- `openai-6-en` — English prompts and Skills (default, recommended), 7 roles with designer; Astra for Oracle/Council, Sol for Orchestrator, Luna for specialist lanes
 - `openai-6-zh` — Chinese (Simplified) prompts and Skills, 7 roles with the same tiered model mapping
 - `openai-6-zh-nodesigner` — Chinese (Simplified) prompts and Skills, 6 roles without designer (server-side), with the same tiered model mapping
 - `openai-5.6-en` — English prompts and Skills, 7 roles with designer
@@ -55,7 +55,7 @@ Preset-specific Skill files are bundled under each preset directory and installe
 
 GPT-6 model availability still depends on the Codex account or API credentials in use; the installer validates package integrity and configuration, not model entitlement.
 
-The GPT-5.6 presets mirror the upstream OpenAI mapping: Orchestrator uses `gpt-5.6-terra` at `high`; Oracle and the Codex Council adaptation use `gpt-5.6-sol` at `high`; Librarian and Explorer use `gpt-5.6-luna` at `low`; Designer uses Luna at `medium`; Fixer uses Luna at `high`. GPT-6 presets use all three GPT-6 tiers: Oracle and Council use `gpt-6-astra/high` for independent high-stakes analysis, Orchestrator and Fixer use `gpt-6-sol/high` for coordinated implementation, and Librarian/Explorer use `gpt-6-luna/low` while Designer uses Luna at `medium`.
+The GPT-5.6 presets mirror the upstream OpenAI mapping: Orchestrator uses `gpt-5.6-terra` at `high`; Oracle and the Codex Council adaptation use `gpt-5.6-sol` at `high`; Librarian and Explorer use `gpt-5.6-luna` at `low`; Designer uses Luna at `medium`; Fixer uses Luna at `high`. GPT-6 follows the [upstream OpenAI preset](https://github.com/alvinunreal/oh-my-opencode-slim/blob/aab1e48e5fc4b44b2dbc4187142f565b1aa01f62/docs/openai-preset.md): Orchestrator uses `gpt-6-sol/high`, Oracle and the Codex Council adaptation use `gpt-6-astra/high`, Librarian and Explorer use `gpt-6-luna/low`, Designer uses Luna/medium, and Fixer uses Luna/high.
 
 ## Manual installation
 
@@ -82,7 +82,11 @@ See [Slim Codex architecture](docs/slim-codex-architecture.md) for the runtime g
 
 See [Council expert agents](docs/council-expert-agents.md) for the minimal read-only custom-agent TOML, model inheritance policy, and the parent-permission limitation.
 
-Each preset bundles its own Skill files under `presets/<id>/skills/`. `install` or `switch-preset` deploys the active preset's Skills to the selected Skill scope. Start a new Codex task after installation.
+For a focused logic review, ask: “Spawn only the `oracle` subagent to analyze `<module or behavior>` read-only. Report the call path, state transitions, edge cases, conclusions, and file/line evidence.” Use `explorer` first when the code path is unknown.
+
+Versioned Skill authoring sources live under `skill-sources/<sourceVersion>/`; each preset still bundles a complete copy under `presets/<id>/skills/`. `install` or `switch-preset` deploys the active preset's Skills to the selected Skill scope. Start a new Codex task after installation.
+
+The reviewed role MCP denylist is portable guidance keyed by server ID. Entries for servers absent from a local Codex config have no effect; installation does not infer new denylist entries from personal MCP connections. The guidance is not hard MCP isolation.
 
 To add a new generation, follow the [Adding a model preset maintenance guide](docs/adding-a-preset.md).
 
