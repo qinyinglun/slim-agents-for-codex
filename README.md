@@ -44,7 +44,7 @@ If files appear in an unexpected location, inspect `echo "$CODEX_HOME"` and use 
 
 Available presets:
 
-- `openai-6-en` — English prompts and Skills (default, recommended), 7 roles with designer; Astra for Oracle/Council, Sol for Orchestrator, Luna for specialist lanes
+- `openai-6-en` — English prompts and Skills (default, recommended), 7 roles with designer; Astra for Oracle/Council, GPT-6.1 Sol for Orchestrator, Luna for specialist lanes
 - `openai-6-zh` — Chinese (Simplified) prompts and Skills, 7 roles with the same tiered model mapping
 - `openai-6-zh-nodesigner` — Chinese (Simplified) prompts and Skills, 6 roles without designer (server-side), with the same tiered model mapping
 - `openai-5.6-en` — English prompts and Skills, 7 roles with designer
@@ -55,7 +55,7 @@ Preset-specific Skill files are bundled under each preset directory and installe
 
 GPT-6 model availability still depends on the Codex account or API credentials in use; the installer validates package integrity and configuration, not model entitlement.
 
-The GPT-5.6 presets mirror the upstream OpenAI mapping: Orchestrator uses `gpt-5.6-terra` at `high`; Oracle and the Codex Council adaptation use `gpt-5.6-sol` at `high`; Librarian and Explorer use `gpt-5.6-luna` at `low`; Designer uses Luna at `medium`; Fixer uses Luna at `high`. GPT-6 follows the [upstream OpenAI preset](https://github.com/alvinunreal/oh-my-opencode-slim/blob/aab1e48e5fc4b44b2dbc4187142f565b1aa01f62/docs/openai-preset.md): Orchestrator uses `gpt-6-sol/high`, Oracle and the Codex Council adaptation use `gpt-6-astra/high`, Librarian and Explorer use `gpt-6-luna/low`, Designer uses Luna/medium, and Fixer uses Luna/high.
+The GPT-5.6 presets mirror the upstream OpenAI mapping: Orchestrator uses `gpt-5.6-terra` at `high`; Oracle and the Codex Council adaptation use `gpt-5.6-sol` at `high`; Librarian and Explorer use `gpt-5.6-luna` at `low`; Designer uses Luna at `medium`; Fixer uses Luna at `high`. GPT-6 keeps the [upstream OpenAI preset](https://github.com/alvinunreal/oh-my-opencode-slim/blob/aab1e48e5fc4b44b2dbc4187142f565b1aa01f62/docs/openai-preset.md) role tiers, with an explicit Codex override to [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol) for Orchestrator at `high`: Oracle and the Codex Council adaptation use `gpt-6-astra/high`, Librarian and Explorer use `gpt-6-luna/low`, Designer uses Luna/medium, and Fixer uses Luna/high.
 
 ## Manual installation
 

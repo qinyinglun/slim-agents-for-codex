@@ -1,6 +1,6 @@
 name = "orchestrator"
 description = "执行团队协调者，通过四个 Slim 专家实现 root 审批通过的方案。"
-model = "gpt-6-sol"
+model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """

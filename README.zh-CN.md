@@ -44,7 +44,7 @@ node dist/cli.js install --preset latest --scope global --yes
 
 可用 presets：
 
-- `openai-6-en` — 英文提示词和 Skills（默认、推荐），7 个角色含 designer；Oracle/Council 使用 Astra，Orchestrator 使用 Sol，专家通道使用 Luna
+- `openai-6-en` — 英文提示词和 Skills（默认、推荐），7 个角色含 designer；Oracle/Council 使用 Astra，Orchestrator 使用 GPT-6.1 Sol，专家通道使用 Luna
 - `openai-6-zh` — 中文（简体）提示词和 Skills，7 个角色，采用相同的分层模型映射
 - `openai-6-zh-nodesigner` — 中文（简体）提示词和 Skills，6 个角色不含 designer（服务端场景），采用相同的分层模型映射
 - `openai-5.6-en` — 英文提示词和 Skills，7 个角色含 designer
@@ -55,7 +55,7 @@ node dist/cli.js install --preset latest --scope global --yes
 
 GPT-6 模型是否可用取决于所使用的 Codex 账号或 API 凭据；安装器验证包完整性和配置，不验证模型权限。
 
-GPT-5.6 presets 与上游 OpenAI 映射保持一致：Orchestrator 使用 `gpt-5.6-terra/high`；Oracle 和 Codex 新增的 Council 适配使用 `gpt-5.6-sol/high`；Librarian、Explorer 使用 `gpt-5.6-luna/low`；Designer 使用 Luna/medium；Fixer 使用 Luna/high。GPT-6 遵循[上游 OpenAI preset](https://github.com/alvinunreal/oh-my-opencode-slim/blob/aab1e48e5fc4b44b2dbc4187142f565b1aa01f62/docs/openai-preset.md)：Orchestrator 使用 `gpt-6-sol/high`，Oracle 和本项目新增的 Council 使用 `gpt-6-astra/high`，Librarian/Explorer 使用 `gpt-6-luna/low`，Designer 使用 Luna/medium，Fixer 使用 Luna/high。
+GPT-5.6 presets 与上游 OpenAI 映射保持一致：Orchestrator 使用 `gpt-5.6-terra/high`；Oracle 和 Codex 新增的 Council 适配使用 `gpt-5.6-sol/high`；Librarian、Explorer 使用 `gpt-5.6-luna/low`；Designer 使用 Luna/medium；Fixer 使用 Luna/high。GPT-6 保留[上游 OpenAI preset](https://github.com/alvinunreal/oh-my-opencode-slim/blob/aab1e48e5fc4b44b2dbc4187142f565b1aa01f62/docs/openai-preset.md)的角色分层，但明确将 Orchestrator 覆盖为 [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol) 的 `high`：Oracle 和本项目新增的 Council 使用 `gpt-6-astra/high`，Librarian/Explorer 使用 `gpt-6-luna/low`，Designer 使用 Luna/medium，Fixer 使用 Luna/high。
 
 ## 手动安装
 

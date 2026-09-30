@@ -46,10 +46,11 @@ const modelProfiles = {
     fixer: ["gpt-5.6-luna", "high"],
     council: ["gpt-5.6-sol", "high"],
   }),
-  // Upstream OpenAI preset at alvinunreal/oh-my-opencode-slim@aab1e48 (2026-09-23).
+  // Upstream role tiers at alvinunreal/oh-my-opencode-slim@aab1e48 (2026-09-23).
+  // This Codex preset upgrades the upstream Orchestrator's Sol to GPT-6.1 Sol.
   // Council is this Codex adapter's additional advisory role.
   "openai-6": mapping({
-    orchestrator: ["gpt-6-sol", "high"],
+    orchestrator: ["gpt-6.1-sol", "high"],
     oracle: ["gpt-6-astra", "high"],
     librarian: ["gpt-6-luna", "low"],
     explorer: ["gpt-6-luna", "low"],

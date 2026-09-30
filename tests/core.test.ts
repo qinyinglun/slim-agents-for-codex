@@ -90,9 +90,9 @@ describe("preset generation", () => {
     expect(generatePreset("openai-5.6-zh-nodesigner").preset.models).toEqual(withoutDesigner);
   });
 
-  it("matches the upstream GPT-6 specialist mapping plus the Codex Council adaptation", () => {
+  it("uses GPT-6.1 Sol for Orchestrator while keeping the GPT-6 specialist tiers", () => {
     const expected = {
-      orchestrator: { model: "gpt-6-sol", effort: "high" },
+      orchestrator: { model: "gpt-6.1-sol", effort: "high" },
       oracle: { model: "gpt-6-astra", effort: "high" },
       librarian: { model: "gpt-6-luna", effort: "low" },
       explorer: { model: "gpt-6-luna", effort: "low" },
