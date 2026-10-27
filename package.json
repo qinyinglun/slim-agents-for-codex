@@ -15,14 +15,15 @@
     "url": "https://github.com/qinyinglun/slim-agents-for-codex/issues"
   },
   "bin": { "slim-agents-codex": "dist/cli.js" },
-  "files": ["dist", "presets", "skill-sources", "docs/adding-a-preset.md", "docs/adding-a-preset.zh-CN.md", "docs/preset-lifecycle.md", "docs/slim-codex-architecture.md", "docs/council-expert-agents.md", "README.md", "README.zh-CN.md", "LICENSE", "NOTICE.md"],
+  "files": ["dist", "presets", "skill-sources", "scripts/verify-session-profiles.mjs", "docs/session-profiles.md", "docs/session-profiles.zh-CN.md", "docs/adding-a-preset.md", "docs/adding-a-preset.zh-CN.md", "docs/preset-lifecycle.md", "docs/slim-codex-architecture.md", "docs/council-expert-agents.md", "README.md", "README.zh-CN.md", "LICENSE", "NOTICE.md"],
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "snapshots": "node dist/cli.js convert --all --output presets --check",
-    "pack:check": "npm pack --dry-run --json"
+    "pack:check": "bun pm pack --dry-run",
+    "profiles:check": "bun scripts/verify-session-profiles.mjs"
   },
   "dependencies": { "smol-toml": "1.7.0" },
   "devDependencies": {

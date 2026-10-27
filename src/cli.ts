@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cp, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,7 @@ import { createInterface } from "node:readline/promises";
 import { parse } from "smol-toml";
 import { filesBelow, installPreset, previewInstall, skillsSourceDir, validateInstalledSkills, versionedSkillSourceDir } from "./core/installer.js";
 import { aliases, generatePreset, managedRoleNames, presets, renderAliases } from "./core/presets.js";
+import { installProfiles, previewProfiles, validateProfile } from "./core/profiles.js";
 
 export interface CliIo { log(line: string): void; confirm(question: string): Promise<boolean> }
 
@@ -98,7 +99,45 @@ async function assertRoleDocument(name: string, expectedToml: string, actualToml
 export async function runCli(args: string[], io: CliIo): Promise<number> {
   const command = args[0] ?? "help";
   if (command === "help" || command === "--help" || command === "-h") {
-    io.log("slim-agents-codex <convert|install|validate|list-presets|switch-preset> [--skills-home PATH] [options]");
+    io.log("slim-agents-codex <convert|install|install-profiles|validate|list-presets|switch-preset> [--skills-home PATH] [options]");
+    io.log("install-profiles [--profile bal|pro] [--codex-home PATH] [--skills-home PATH] [--yes] (default: both profiles)");
+    io.log("validate --profile bal|pro --codex-home PATH --skills-home PATH");
+    return 0;
+  }
+  if (command === "install-profiles" || (command === "validate" && args.includes("--profile"))) {
+    if (valueAfter(args, "--scope", "global") !== "global") throw new Error("Session profiles require global scope; use --codex-home to choose a user configuration home.");
+    if (args.includes("--preset")) throw new Error("Session profiles select their own GPT-6 presets; omit --preset.");
+    for (const option of ["--profile", "--codex-home", "--skills-home", "--scope"]) {
+      if (args.includes(option) && (!valueAfter(args, option) || valueAfter(args, option)!.startsWith("--"))) throw new Error(`Missing value for ${option}`);
+    }
+    const codexHome = resolve(valueAfter(args, "--codex-home", process.env.CODEX_HOME ?? join(homedir(), ".codex"))!);
+    const skillsHome = resolve(valueAfter(args, "--skills-home", join(homedir(), ".agents", "skills"))!);
+    const name = valueAfter(args, "--profile");
+    if (command === "validate") {
+      if (!args.includes("--skills-home")) throw new Error("--skills-home is required to validate shared Skills");
+      const item = await validateProfile(name!, codexHome, skillsHome);
+      io.log(`valid profile: ${item.id} (${item.generated.roleOrder.length} roles; ${item.profile.preset})`);
+      io.log(`valid skills: ${skillsHome} (${item.generated.skillNames.length} skills)`);
+      return 0;
+    }
+    const preview = await previewProfiles(codexHome, skillsHome, name ? [name] : ["bal", "pro"]);
+    for (const item of preview.profiles) {
+      io.log(`profile: ${item.id} -> ${item.profile.preset} (root: ${item.profile.model}/high)`);
+      io.log(`config: ${item.configPath}`);
+      io.log(`roles: ${join(item.target, "agents")}`);
+    }
+    io.log(`shared skills: ${skillsHome}`);
+    io.log("Existing managed profiles and role directories will be backed up; base config and active agents are preserved.");
+    if (!args.includes("--yes") && !await io.confirm("Install these session profiles?")) {
+      io.log("cancelled; no files changed");
+      return 2;
+    }
+    for (const backup of await installProfiles(preview)) io.log(`backup: ${backup}`);
+    for (const item of preview.profiles) {
+      io.log(`valid profile: ${item.id} (${item.generated.roleOrder.length} roles; ${item.profile.preset})`);
+      io.log(`start: codex -p ${item.id}`);
+    }
+    io.log("New configuration takes effect in a new Codex task. Project config can override a profile; inspect /debug-config.");
     return 0;
   }
   if (command === "list-presets") {
@@ -212,4 +251,4 @@ async function main() {
   }
 }
 
-if (resolve(process.argv[1] ?? "") === resolve(fileURLToPath(import.meta.url))) void main();
+if (process.argv[1] && await realpath(resolve(process.argv[1])).catch(() => undefined) === await realpath(fileURLToPath(import.meta.url))) void main();

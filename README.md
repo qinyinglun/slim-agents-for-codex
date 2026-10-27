@@ -12,12 +12,24 @@ For official guidance on subagent workflows, custom agent TOML files, model and 
 
 This project is distributed through GitHub rather than the npm registry.
 
+For per-session GPT-6 model assignments with six Chinese roles and no Designer:
+
+```bash
+bun install
+bun run build
+bun dist/cli.js install-profiles
+codex -p bal  # Sol Root + Terra Fixer
+codex -p pro  # Astra Root + Sol Fixer
+```
+
+See the [session profiles guide](docs/session-profiles.md) for installation, model assignments, concurrent sessions, validation, updates, troubleshooting and rollback. Existing base configuration and active agents are preserved.
+
 ### Install a GitHub Release package
 
 Download `slim-agents-for-codex-0.2.0.tgz` from the matching GitHub Release. First install the package to make the CLI available:
 
 ```bash
-npm install --global ./slim-agents-for-codex-0.2.0.tgz
+bun add --global ./slim-agents-for-codex-0.2.0.tgz
 ```
 
 This installs only the `slim-agents-codex` CLI; it does **not** create any Codex agent files. Apply a preset separately:
@@ -32,10 +44,10 @@ If any Slim preset is already installed, use `slim-agents-codex switch-preset --
 ### Run from a source checkout
 
 ```bash
-npm ci
-npm run build
-node dist/cli.js list-presets
-node dist/cli.js install --preset latest --scope global
+bun install
+bun run build
+bun dist/cli.js list-presets
+bun dist/cli.js install --preset latest --scope global
 ```
 
 `install` previews the resolved immutable preset, config path, Skill path, and backup path before asking for confirmation. It installs both the selected agent preset and the two managed Slim Skills. With `--scope global`, agent files are written to `$CODEX_HOME/agents` when `CODEX_HOME` is set, otherwise to `~/.codex/agents`; Skills go to `$HOME/.agents/skills`. With `--scope project`, agent files are written to `<current-project>/.codex/agents` and Skills to `<current-project>/.agents/skills`. Explicit `--codex-home PATH` and `--skills-home PATH` options override those targets. The `config:` and `installed ... at ...` output lines are authoritative for the actual target paths. Use `--yes` only for explicit non-interactive installation.
@@ -100,23 +112,27 @@ To add a new generation, follow the [Adding a model preset maintenance guide](do
 - `validate --codex-home DIR --skills-home DIR [--preset ID]`
 - `install --preset ID [--scope global|project] [--codex-home DIR] [--skills-home DIR] [--yes]`
 - `switch-preset --preset ID [--scope global|project] [--codex-home DIR] [--skills-home DIR] [--yes]`
+- `install-profiles [--profile bal|pro] [--codex-home DIR] [--skills-home DIR] [--yes]`
+- `validate --profile bal|pro --codex-home DIR --skills-home DIR`
 
 `convert --check` is non-mutating and fails when generated agent TOMLs, `config.snippet.toml`, manifests, aliases, or Skill files differ from the committed snapshots. `validate --preset ID` compares parsed role semantics with the selected generator source; `validate --codex-home DIR` also resolves installed `agents/<role>.toml` paths from that directory's `config.toml` and requires `--skills-home DIR` so the exact packaged managed Skills cannot be skipped silently. Portable role files keep reviewed MCP denylists in `developer_instructions` and emit no partial `mcp_servers` tables, because standalone parsing and parent transport merging make partial or dummy transports invalid. `switch-preset` backs up the config before changing live agents or Skills, archives existing managed role files and managed Skills under `agent-presets/slim-agents-for-codex/`, removes inactive managed roles such as Observer, replaces only the managed Slim Skills from the active preset, preserves unrelated custom roles and Skills, and post-validates the installation. These checks do not prove model entitlement or hard MCP isolation. Start a new Codex task after changing agent configuration.
 
 ## Development
 
 ```bash
-npm install
-npm test
-npm run typecheck
-npm run build
-npm pack --dry-run
+bun install
+bun run test
+bun run typecheck
+bun run build
+bun run pack:check
 ```
 
 Requires Node.js 20 or newer.
+
+The new session profiles maintain only the GPT-6 model family. GPT-5.6 snapshots remain available as unchanged historical presets.
 
 ## Maintenance status
 
 This is a community, experimental project maintained on an as-needed basis. It does not promise immediate support for every new Codex model or configuration change. Preset IDs remain immutable: future model mappings should be added as new preset directories instead of replacing historical presets.
 
-The package is intentionally marked private to prevent accidental publication to the npm registry. `npm pack` and installation from the resulting `.tgz` remain supported.
+The package is intentionally marked private to prevent accidental publication to the npm registry. `bun pm pack` and installation from the resulting `.tgz` remain supported.

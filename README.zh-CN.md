@@ -12,12 +12,24 @@
 
 本项目通过 GitHub 发布，不会上架 npm Registry。
 
+同一项目的不同会话需要不同模型组合时，使用 GPT-6 中文无 Designer 会话预设：
+
+```bash
+bun install
+bun run build
+bun dist/cli.js install-profiles
+codex -p bal  # 日常：Sol Root + Terra Fixer
+codex -p pro  # 复杂任务：Astra Root + Sol Fixer
+```
+
+完整的安装、模型分配、并行会话、验证、升级、排错和回滚说明见 [会话预设使用指南](docs/session-profiles.zh-CN.md)。基础配置和现有活动代理保持原样。
+
 ### 安装 GitHub Release 包
 
 从对应的 GitHub Release 下载 `slim-agents-for-codex-0.2.0.tgz`。先安装该包以提供 CLI：
 
 ```bash
-npm install --global ./slim-agents-for-codex-0.2.0.tgz
+bun add --global ./slim-agents-for-codex-0.2.0.tgz
 ```
 
 此步骤只安装 `slim-agents-codex` CLI，**不会**创建任何 Codex agent 文件。请单独应用 preset：
@@ -32,10 +44,10 @@ slim-agents-codex install --preset latest --scope global --yes
 ### 从源代码运行
 
 ```bash
-npm ci
-npm run build
-node dist/cli.js list-presets
-node dist/cli.js install --preset latest --scope global --yes
+bun install
+bun run build
+bun dist/cli.js list-presets
+bun dist/cli.js install --preset latest --scope global --yes
 ```
 
 `install` 在写入前会显示实际解析的固定版本、配置文件路径、Skill 路径和备份路径，并要求确认；它会同时安装选定的 agent preset 与两个受管 Slim Skills。使用 `--scope global` 时，agent 文件写入设置了 `CODEX_HOME` 时的 `$CODEX_HOME/agents`，否则写入 `~/.codex/agents`；Skills 写入 `$HOME/.agents/skills`。使用 `--scope project` 时，agent 文件写入 `<current-project>/.codex/agents`，Skills 写入 `<current-project>/.agents/skills`。明确提供的 `--codex-home PATH` 和 `--skills-home PATH` 选项会覆盖对应目标。`config:` 和 `installed ... at ...` 输出行是实际目标路径的权威依据。仅在明确需要非交互式安装时使用 `--yes`。
@@ -47,6 +59,8 @@ node dist/cli.js install --preset latest --scope global --yes
 - `openai-6-en` — 英文提示词和 Skills（默认、推荐），7 个角色含 designer；Oracle/Council 使用 Astra，Orchestrator 使用 GPT-6.1 Sol，专家通道使用 Luna
 - `openai-6-zh` — 中文（简体）提示词和 Skills，7 个角色，采用相同的分层模型映射
 - `openai-6-zh-nodesigner` — 中文（简体）提示词和 Skills，6 个角色不含 designer（服务端场景），采用相同的分层模型映射
+- `openai-6-pro-zh-nodesigner` — 中文六角色，Fixer 升级为 GPT-6.1 Sol；作为 `pro` 会话的子代理预设
+- `openai-6.1-bal-zh-nodesigner` — 中文六角色，Fixer 使用 GPT-6.1 Terra/high；作为当前 `bal` 会话的子代理预设
 - `openai-5.6-en` — 英文提示词和 Skills，7 个角色含 designer
 - `openai-5.6-zh` — 中文（简体）提示词和 Skills，7 个角色含 designer
 - `openai-5.6-zh-nodesigner` — 中文（简体）提示词和 Skills，6 个角色不含 designer（服务端场景）
@@ -100,20 +114,24 @@ Council 专用的只读自定义 agent TOML、模型继承策略和父权限限�
 - `validate --codex-home DIR --skills-home DIR [--preset ID]`
 - `install --preset ID [--scope global|project] [--codex-home DIR] [--skills-home DIR] [--yes]`
 - `switch-preset --preset ID [--scope global|project] [--codex-home DIR] [--skills-home DIR] [--yes]`
+- `install-profiles [--profile bal|pro] [--codex-home DIR] [--skills-home DIR] [--yes]`
+- `validate --profile bal|pro --codex-home DIR --skills-home DIR`
 
 `convert --check` 不会写文件；只要生成的 agent TOML、`config.snippet.toml`、manifest、aliases 或 Skill 文件与已提交的 snapshot 不同就会失败。`validate --preset ID` 将解析后的角色语义与指定的生成器源进行比较；`validate --codex-home DIR` 还会从该目录的 `config.toml` 解析已安装的 `agents/<role>.toml`，并要求提供 `--skills-home DIR`，以避免静默跳过包内受管 Skills 的精确验证。可移植角色文件将经审查的 MCP denylist 放在 `developer_instructions` 中，不生成局部的 `mcp_servers` 表，因为独立解析和父传输合并会使部分或虚拟传输无效。`switch-preset` 会先备份 config，再更改活动的 agents 或 Skills；它会将现有受管角色文件和受管 Skills 归档到 `agent-presets/slim-agents-for-codex/` 下，移除 Observer 等已停用的受管角色，仅替换来自活动 preset 的受管 Slim Skills，保留无关的自定义角色和 Skills，最后再验证安装结果。这些检查不代表用户账户一定拥有指定模型的权限或硬性的 MCP 隔离。更改 agent 配置后，请开启新的 Codex 任务。
 
 ## 开发
 
 ```bash
-npm install
-npm test
-npm run typecheck
-npm run build
-npm pack --dry-run
+bun install
+bun run test
+bun run typecheck
+bun run build
+bun run pack:check
 ```
 
 需要 Node.js 20 或更高版本。
+
+新增会话预设仅维护 GPT-6；GPT-5.6 作为历史快照保留，本次不做更新。
 
 ## 维护状态
 

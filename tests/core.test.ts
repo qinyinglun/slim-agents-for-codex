@@ -372,6 +372,8 @@ describe("CLI", () => {
     await copyPresetSnapshot("openai-6-en", outputRoot);
     await copyPresetSnapshot("openai-6-zh", outputRoot);
     await copyPresetSnapshot("openai-6-zh-nodesigner", outputRoot);
+    await copyPresetSnapshot("openai-6-pro-zh-nodesigner", outputRoot);
+    await copyPresetSnapshot("openai-6.1-bal-zh-nodesigner", outputRoot);
 
     await expect(runCli(["convert", "--all", "--output", outputRoot, "--check"], { log: () => undefined, confirm: async () => false })).rejects.toThrow(/aliases|snapshot|drift/i);
     await expect(readFile(join(outputRoot, "aliases.json"), "utf8")).rejects.toThrow();

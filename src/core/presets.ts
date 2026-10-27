@@ -92,7 +92,21 @@ export const presets: Record<string, Preset> = {
   "openai-6-en": definePreset("openai-6-en", "slim-codex-2026-07", "2026-09-21", modelProfiles["openai-6"]),
   "openai-6-zh": definePreset("openai-6-zh", "slim-codex-2026-07-zh", "2026-09-21", modelProfiles["openai-6"]),
   "openai-6-zh-nodesigner": definePreset("openai-6-zh-nodesigner", "slim-codex-2026-07-zh-no-designer", "2026-09-21", withoutDesigner(modelProfiles["openai-6"])),
+  "openai-6-pro-zh-nodesigner": definePreset("openai-6-pro-zh-nodesigner", "slim-codex-2026-07-zh-no-designer", "2026-10-21", {
+    ...withoutDesigner(modelProfiles["openai-6"]),
+    fixer: { model: "gpt-6.1-sol", effort: "high" },
+  }),
+  "openai-6.1-bal-zh-nodesigner": definePreset("openai-6.1-bal-zh-nodesigner", "slim-codex-2026-07-zh-no-designer", "2026-10-27", {
+    ...withoutDesigner(modelProfiles["openai-6"]),
+    fixer: { model: "gpt-6.1-terra", effort: "high" },
+  }),
 };
+
+// Session choices reuse versioned role prompts and never rewrite historical presets.
+export const sessionProfiles = {
+  bal: { preset: "openai-6.1-bal-zh-nodesigner", model: "gpt-6.1-sol", effort: "high", previousPresets: ["openai-6-zh-nodesigner"] },
+  pro: { preset: "openai-6-pro-zh-nodesigner", model: "gpt-6-astra", effort: "high" },
+} as const;
 
 export const aliases = { latest: "openai-6-en", recommended: "openai-6-en" } as const;
 export const roles = slimCodex202607RoleSource.roles;
